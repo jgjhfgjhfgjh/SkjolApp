@@ -5,12 +5,12 @@ import {
   ITEMS,
   ITEM_BY_ID,
   QUICK,
-  ROLESRC,
-  SHOPS,
+  ROLESRC as BASE_ROLESRC,
+  SHOPS as BASE_SHOPS,
   UNITKEYS,
-  shopById,
   type Item,
   type Role,
+  type Shop,
   type Station,
   type Unit,
 } from "@/lib/catalog";
@@ -54,6 +54,10 @@ type UI = {
   addOpen: boolean;
   searchOpen: boolean;
   qtyEdit: { id: string; text: string } | null;
+  newShopOpen: boolean;
+  newShopName: string;
+  newCatOpen: boolean;
+  newCatName: string;
 };
 
 const UI_KEY = "skjol.ui.v1";
@@ -66,6 +70,7 @@ function loadUI(): UI {
     query: "", newItem: "", newSrc: null, newCat: null, expanded: null, swiped: null, swipeDir: null,
     peek: null, editing: null, editText: "", shopPick: null, openHist: null, toast: null,
     pinOpen: false, pin: "", pinErr: false, addOpen: false, searchOpen: false, qtyEdit: null,
+    newShopOpen: false, newShopName: "", newCatOpen: false, newCatName: "",
   };
   try {
     const p = JSON.parse(localStorage.getItem(UI_KEY) || "null");
@@ -106,6 +111,12 @@ const NOTIF: Record<Lang, { title: string; sub: string; on: string; done: string
     done: "Powiadomienia są włączone", off: "Wyłącz", denied: "Powiadomienia są zablokowane. Zezwól na nie dla SKJÓL w ustawieniach telefonu.",
     install: "Na iPhonie i iPadzie najpierw dodaj aplikację do ekranu głównego, potem włącz tu powiadomienia.", err: "Nie udało się włączyć powiadomień — spróbuj ponownie.",
   },
+};
+const ADD_NEW: Record<Lang, { shop: string; cat: string; shopPh: string; catPh: string }> = {
+  en: { shop: "New shop", cat: "New category", shopPh: "Shop or supplier name", catPh: "Category name" },
+  is: { shop: "Ný verslun", cat: "Nýr flokkur", shopPh: "Heiti verslunar eða birgja", catPh: "Heiti flokks" },
+  cs: { shop: "Nový obchod", cat: "Nová kategorie", shopPh: "Název obchodu nebo dodavatele", catPh: "Název kategorie" },
+  pl: { shop: "Nowy sklep", cat: "Nowa kategoria", shopPh: "Nazwa sklepu lub dostawcy", catPh: "Nazwa kategorii" },
 };
 const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
 const SHARE_TEXT: Record<Lang, string> = {
@@ -279,6 +290,16 @@ export default function App() {
         .map((c) => ({ id: c.id, name: c.name, hint: "", cat: c.cat, src: c.src, isCustom: true })),
     [db.custom_items],
   );
+  // Catalog shops + shops staff added; custom ones sit before the ad-hoc "other" bucket.
+  const SHOPS: Shop[] = useMemo(() => {
+    const extra = [...db.custom_shops]
+      .sort((a, b) => a.created_at - b.created_at)
+      .map((c) => ({ id: c.id, name: c.name, url: null, known: true, adhoc: false, groups: [] }));
+    return BASE_SHOPS.filter((x) => !x.adhoc).concat(extra, BASE_SHOPS.filter((x) => x.adhoc));
+  }, [db.custom_shops]);
+  const shopById = (id: string) => SHOPS.find((x) => x.id === id);
+  // A shop added in the kitchen belongs to the kitchen (on every device), one added at the bar to the bar.
+  const allowedFor = (st: Station) => BASE_ROLESRC[st].concat(db.custom_shops.filter((c) => c.station === st).map((c) => c.id));
   const item = (id: string): Item | null => ITEM_BY_ID[id] || custom.find((c) => c.id === id) || null;
   const nameOf = (it: Item | null) => (it && (prefs[it.id]?.rename || it.name)) || "";
   const srcOf = (it: Item | null) => (it && (prefs[it.id]?.src_override || it.src)) || "other";
@@ -288,7 +309,7 @@ export default function App() {
   const isKitchen = role === "kitchen", isBar = role === "bar", isManager = role === "manager";
   const isEntry = isKitchen || isBar;
   const station = isEntry ? (role as Station) : null;
-  const allowed = station ? ROLESRC[station] : null;
+  const allowed = station ? allowedFor(station) : null;
 
   const draft = useMemo(() => {
     const d: Record<string, LineRow> = {};
@@ -508,7 +529,7 @@ export default function App() {
 
   function repeat(lines: HistLine[]) {
     if (!station) return;
-    const mine = lines.filter((l) => item(l.id) && ROLESRC[station].includes(srcOf(item(l.id))));
+    const mine = lines.filter((l) => item(l.id) && allowedFor(station).includes(srcOf(item(l.id))));
     const now = Date.now();
     store.upsert(
       "lines",
@@ -1083,9 +1104,69 @@ export default function App() {
   const allowedShops = SHOPS.filter((x) => !x.adhoc && (!allowed || allowed.includes(x.id)));
   const addCats = (() => {
     const names: string[] = [];
-    SHOPS.filter((x) => !allowed || allowed.includes(x.id)).forEach((x) => x.groups.forEach((g) => { if (!names.includes(g)) names.push(g); }));
+    const add = (g: string) => {
+      if (!names.includes(g)) names.push(g);
+    };
+    SHOPS.filter((x) => !allowed || allowed.includes(x.id)).forEach((x) => x.groups.forEach(add));
+    custom.filter((c) => !allowed || allowed.includes(srcOf(c))).forEach((c) => add(c.cat));
+    if (S.newCat) add(S.newCat);
     return names.filter((n) => n !== "Other").concat(["Other"]);
   })();
+  const scrollEnd = (id: string) =>
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+    }, 60);
+  function addShop() {
+    const nm = S.newShopName.trim();
+    if (!nm || !station) return;
+    const existing = allowedShops.find((x) => x.name.toLowerCase() === nm.toLowerCase());
+    let id = existing?.id;
+    if (!id) {
+      id = "u" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      store.upsert("custom_shops", [{ id, name: nm, station, created_by: S.author, created_at: Date.now() }]);
+    }
+    set({ newSrc: id, newShopOpen: false, newShopName: "" });
+    scrollEnd("add-shop-row");
+  }
+  function addCat() {
+    const nm = S.newCatName.trim();
+    if (!nm) return;
+    const existing = addCats.find((c) => catLabel(c).toLowerCase() === nm.toLowerCase());
+    set({ newCat: existing || nm, newCatOpen: false, newCatName: "" });
+    scrollEnd("add-cat-row");
+  }
+  const pillNew = (label: string, onClick: () => void) => (
+    <button
+      onClick={onClick}
+      style={{ flex: "none", border: "1.5px dashed #C24A00", background: "#FFF6EF", color: "#C24A00", padding: "0 14px", minHeight: 40, borderRadius: 20, fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}
+    >
+      + {label}
+    </button>
+  );
+  const newField = (value: string, ph: string, onChange: (v: string) => void, onAdd: () => void, onClose: () => void) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, animation: "rise .15s ease" }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", background: "#F2F2F7", borderRadius: 11, padding: "0 12px", height: 44, border: "2px solid #FF7A18" }}>
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onAdd();
+            }
+            if (e.key === "Escape") onClose();
+          }}
+          placeholder={ph}
+          enterKeyHint="done"
+          style={{ flex: 1, minWidth: 0, border: 0, background: "transparent", fontSize: 16, padding: 0 }}
+        />
+      </div>
+      <button onClick={onAdd} style={{ border: 0, background: "#2E2C33", color: "#FFFFFF", fontSize: 14, fontWeight: 700, padding: "0 14px", minHeight: 44, borderRadius: 11, opacity: value.trim() ? 1 : 0.4, whiteSpace: "nowrap" }}>{t.add}</button>
+      <button onClick={onClose} aria-label={t.cancel} style={{ border: 0, background: "transparent", color: "#8E8E93", fontSize: 22, lineHeight: 1, padding: "0 4px", minHeight: 44 }}>×</button>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4F4F2" }}>
@@ -1662,7 +1743,7 @@ export default function App() {
                 <button onClick={() => set({ addOpen: false })} style={{ border: 0, background: "transparent", color: "#6C6C70", fontSize: 15, fontWeight: 600, padding: "0 4px", minHeight: 44 }}>{t.cancel}</button>
               </div>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6C6C70", padding: "14px 2px 7px" }}>{t.pickShop}</div>
-              <div data-scroll="1" style={{ display: "flex", gap: 7, margin: "0 -14px", padding: "0 14px 2px" }}>
+              <div id="add-shop-row" data-scroll="1" style={{ display: "flex", gap: 7, margin: "0 -14px", padding: "0 14px 2px" }}>
                 {[{ id: null as string | null, label: t.unknownShop }].concat(allowedShops.map((x) => ({ id: x.id, label: x.name }))).map((o) => {
                   const on = (S.newSrc || null) === o.id;
                   return (
@@ -1671,9 +1752,12 @@ export default function App() {
                     </button>
                   );
                 })}
+                {pillNew(ADD_NEW[S.lang].shop, () => set({ newShopOpen: true, newCatOpen: false }))}
               </div>
+              {S.newShopOpen &&
+                newField(S.newShopName, ADD_NEW[S.lang].shopPh, (v) => set({ newShopName: v }), addShop, () => set({ newShopOpen: false, newShopName: "" }))}
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6C6C70", padding: "14px 2px 7px" }}>{t.pickCat}</div>
-              <div data-scroll="1" style={{ display: "flex", gap: 7, margin: "0 -14px", padding: "0 14px 2px" }}>
+              <div id="add-cat-row" data-scroll="1" style={{ display: "flex", gap: 7, margin: "0 -14px", padding: "0 14px 2px" }}>
                 {addCats.map((nm) => {
                   const on = (S.newCat || "Other") === nm;
                   return (
@@ -1682,7 +1766,10 @@ export default function App() {
                     </button>
                   );
                 })}
+                {pillNew(ADD_NEW[S.lang].cat, () => set({ newCatOpen: true, newShopOpen: false }))}
               </div>
+              {S.newCatOpen &&
+                newField(S.newCatName, ADD_NEW[S.lang].catPh, (v) => set({ newCatName: v }), addCat, () => set({ newCatOpen: false, newCatName: "" }))}
             </div>
           )}
           {fabOn && (

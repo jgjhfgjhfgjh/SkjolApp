@@ -59,15 +59,19 @@ export type PrefRow = {
 
 export type FavRow = { id: string; station: Station; item_id: string };
 
+// Shops/suppliers staff added themselves; synced to all devices, listed under the station that created them.
+export type CustomShopRow = { id: string; name: string; station: Station; created_by: string; created_at: number };
+
 export type Tables = {
   lines: LineRow;
   history: HistoryRow;
   custom_items: CustomRow;
   item_prefs: PrefRow;
   favs: FavRow;
+  custom_shops: CustomShopRow;
 };
 export type TableName = keyof Tables;
-export const TABLES: TableName[] = ["lines", "history", "custom_items", "item_prefs", "favs"];
+export const TABLES: TableName[] = ["lines", "history", "custom_items", "item_prefs", "favs", "custom_shops"];
 
 export interface Driver {
   mode: "local" | "supabase";
