@@ -35,6 +35,8 @@ type RawShop = {
 
 export const UNITKEYS = ["pcs", "pack", "case", "kg", "L", "keg"] as const;
 export type Unit = (typeof UNITKEYS)[number];
+// Unit a new line starts with (staff mostly order whole packs).
+export const DEFAULT_UNIT: Unit = "pack";
 export const QUICK = [1, 2, 5, 10];
 
 export const ROLESRC: Record<Station, string[]> = {

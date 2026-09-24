@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from "react";
 import {
+  DEFAULT_UNIT,
   ITEMS,
   ITEM_BY_ID,
   QUICK,
@@ -433,7 +434,7 @@ export default function App() {
   function setLine(id: string, patch: Partial<LineRow>) {
     if (!station || needName()) return;
     const cur: LineRow = draft[id] || {
-      id: `d:${station}:${id}`, station, item_id: id, status: "draft", qty: 0, unit: "pcs", note: "", by: "",
+      id: `d:${station}:${id}`, station, item_id: id, status: "draft", qty: 0, unit: DEFAULT_UNIT, note: "", by: "",
       at: null, done: false, supplier: "", sent_at: null, sent_by: "",
     };
     const next = { ...cur, ...patch };
@@ -562,7 +563,7 @@ export default function App() {
     store.upsert("custom_items", [{ id, name: nm, cat, src, created_by: S.author, created_at: now }]);
     const prev = S.expanded;
     const rows: LineRow[] = [{
-      id: `d:${station}:${id}`, station, item_id: id, status: "draft", qty: 1, unit: "pcs", note: "", by: S.author,
+      id: `d:${station}:${id}`, station, item_id: id, status: "draft", qty: 1, unit: DEFAULT_UNIT, note: "", by: S.author,
       at: now, done: false, supplier: "", sent_at: null, sent_by: "",
     }];
     if (prev && draft[prev] && !draft[prev].at) rows.push({ ...draft[prev], at: now - 1 });
@@ -945,7 +946,7 @@ export default function App() {
     : [{ id: "buy", label: t.tabBuy, count: pendingCount }, { id: "history", label: t.tabHist, count: 0 }, { id: "settings", label: settingsTitle(S.lang), count: 0 }];
 
   const renderRow = (it: Item, i: number, items: Item[]) => {
-    const l = draft[it.id], qty = l ? l.qty : 0, unit = l ? l.unit : "pcs";
+    const l = draft[it.id], qty = l ? l.qty : 0, unit = l ? l.unit : DEFAULT_UNIT;
     const last = lastQty[it.id];
     const open = S.expanded === it.id;
     const swiped = S.swiped === it.id;
