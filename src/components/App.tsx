@@ -83,6 +83,13 @@ const INSTALL_LABEL: Record<Lang, string> = {
   cs: "Instalovat do zařízení",
   pl: "Zainstaluj na urządzeniu",
 };
+const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
+const SHARE_TEXT: Record<Lang, string> = {
+  en: "Install the SKJÓL goods-order app on your phone or tablet:",
+  is: "Settu upp SKJÓL vörupöntunarappið á símann eða spjaldtölvuna:",
+  cs: "Nainstaluj si aplikaci SKJÓL na objednávky zboží do telefonu nebo tabletu:",
+  pl: "Zainstaluj aplikację SKJÓL do zamawiania towaru na telefonie lub tablecie:",
+};
 // Installed PWA (home-screen icon) — hide the install link there.
 const standalone =
   typeof window !== "undefined" &&
@@ -497,6 +504,21 @@ export default function App() {
     flash(t.tLink);
   }
 
+  // Native share sheet (WhatsApp, Messenger, SMS…) with the install link; copy as fallback.
+  async function shareInstall() {
+    const url = location.origin + "/install";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "SKJÓL", text: SHARE_TEXT[S.lang], url });
+      } catch {
+        // dismissed by the user — nothing to do
+      }
+      return;
+    }
+    copyText(url);
+    flash(t.tLink);
+  }
+
   // ---------- swipe ----------
   function swipeStart(id: string, e: RPointerEvent<HTMLDivElement>) {
     if (S.editing) return;
@@ -739,6 +761,18 @@ export default function App() {
           <div style={{ flex: "none", display: "flex", alignItems: "center", gap: 12, padding: "12px clamp(16px,3vw,32px)" }}>
             <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "0.14em", color: "#2E2C33" }}>SKJÓL</div>
             <div style={{ flex: 1 }} />
+            <button
+              onClick={shareInstall}
+              aria-label={SHARE_LABEL[S.lang]}
+              title={SHARE_LABEL[S.lang]}
+              style={{ flex: "none", width: 42, height: 42, border: 0, borderRadius: 10, background: "#E9E9E6", color: "#2E2C33", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 3v12" />
+                <path d="M8 7l4-4 4 4" />
+                <path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1" />
+              </svg>
+            </button>
             <Langs big lang={S.lang} onLang={(lang) => set({ lang })} />
           </div>
           <div style={{ flex: "none", padding: "clamp(4px,1.5vh,16px) clamp(16px,3vw,32px) clamp(12px,2.4vh,24px)" }}>
@@ -786,6 +820,11 @@ export default function App() {
             )}
           </div>
         </div>
+        {S.toast && (
+          <div role="status" style={{ position: "fixed", left: 0, right: 0, margin: "0 auto", width: "fit-content", bottom: "calc(48px + env(safe-area-inset-bottom))", zIndex: 40, background: "#141218", color: "#FFFFFF", fontSize: 14.5, fontWeight: 500, padding: "13px 22px", borderRadius: 9, boxShadow: "0 4px 10px rgba(23,26,31,0.22),0 18px 40px -14px rgba(23,26,31,0.45)", animation: "rise .16s ease", maxWidth: "88vw", textAlign: "center" }}>
+            {S.toast}
+          </div>
+        )}
       </div>
     );
   }
