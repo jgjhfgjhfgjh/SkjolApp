@@ -59,6 +59,8 @@ type UI = {
   newShopName: string;
   newCatOpen: boolean;
   newCatName: string;
+  histSel: string[] | null; // null = not selecting
+  histConfirm: boolean;
 };
 
 const UI_KEY = "skjol.ui.v1";
@@ -72,6 +74,7 @@ function loadUI(): UI {
     peek: null, editing: null, editText: "", shopPick: null, openHist: null, toast: null,
     pinOpen: false, pin: "", pinErr: false, addOpen: false, searchOpen: false, qtyEdit: null,
     newShopOpen: false, newShopName: "", newCatOpen: false, newCatName: "",
+    histSel: null, histConfirm: false,
   };
   try {
     const p = JSON.parse(localStorage.getItem(UI_KEY) || "null");
@@ -118,6 +121,12 @@ const ADD_NEW: Record<Lang, { shop: string; cat: string; shopPh: string; catPh: 
   is: { shop: "Ný verslun", cat: "Nýr flokkur", shopPh: "Heiti verslunar eða birgja", catPh: "Heiti flokks" },
   cs: { shop: "Nový obchod", cat: "Nová kategorie", shopPh: "Název obchodu nebo dodavatele", catPh: "Název kategorie" },
   pl: { shop: "Nowy sklep", cat: "Nowa kategoria", shopPh: "Nazwa sklepu lub dostawcy", catPh: "Nazwa kategorii" },
+};
+const HIST_DEL: Record<Lang, { select: string; all: string; del: string; confirm: string; done: string }> = {
+  en: { select: "Select", all: "Select all", del: "Delete", confirm: "Really delete? Removed for everyone.", done: "Removed from history" },
+  is: { select: "Velja", all: "Velja allt", del: "Eyða", confirm: "Eyða í alvöru? Hverfur hjá öllum.", done: "Eytt úr sögu" },
+  cs: { select: "Vybrat", all: "Vybrat vše", del: "Smazat", confirm: "Opravdu smazat? Zmizí všem.", done: "Smazáno z historie" },
+  pl: { select: "Zaznacz", all: "Zaznacz wszystko", del: "Usuń", confirm: "Na pewno usunąć? Zniknie u wszystkich.", done: "Usunięto z historii" },
 };
 const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
 const SHARE_TEXT: Record<Lang, string> = {
@@ -756,7 +765,7 @@ export default function App() {
   const shopSeq = pinned ? [pinned].concat(srcKeys.filter((k) => k !== pinned)) : srcKeys;
   const supplierOptions = Array.from(new Set(sentLines.map((l) => l.supplier).filter(Boolean)));
 
-  const padBottom = isOrder || (isBuy && order) ? 110 : 36;
+  const padBottom = isOrder || (isBuy && order) || (isManager && isHistory && S.histSel) ? 110 : 36;
   const fabBottom = isOrder || (isBuy && order) ? 96 : 24;
 
   // ---------- small render helpers ----------
@@ -1221,7 +1230,7 @@ export default function App() {
                 return (
                   <button
                     key={r.id}
-                    onClick={() => set({ tab: r.id as UI["tab"], expanded: null, swiped: null })}
+                    onClick={() => set({ tab: r.id as UI["tab"], expanded: null, swiped: null, histSel: null, histConfirm: false })}
                     style={{
                       border: 0, background: "transparent", padding: "9px 2px 10px", marginRight: 16, fontSize: 16, fontWeight: on ? 700 : 500, letterSpacing: "-0.015em",
                       color: on ? "#141218" : "#5A5566", borderBottom: "2.5px solid " + (on ? "#FF7A18" : "transparent"), display: "flex", alignItems: "center", gap: 7,
@@ -1633,23 +1642,56 @@ export default function App() {
         {/* HISTORY */}
         {isHistory && (
           <div style={{ width: "100%", padding: "0 16px" }}>
-            <div style={{ padding: "20px 0 16px" }}>
-              <h1 style={{ margin: 0, fontSize: 27, fontWeight: 700, letterSpacing: "-0.028em", lineHeight: 1 }}>{t.history}</h1>
+            <div style={{ padding: "20px 0 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <h1 style={{ margin: 0, fontSize: 27, fontWeight: 700, letterSpacing: "-0.028em", lineHeight: 1, flex: 1 }}>{t.history}</h1>
+              {/* Only Gústi may delete history (it is shared by all stations). */}
+              {isManager && history.length > 0 &&
+                (S.histSel ? (
+                  <button
+                    onClick={() => set((s) => ({ histSel: s.histSel && s.histSel.length === history.length ? [] : history.map((h) => h.id), histConfirm: false }))}
+                    style={{ border: "1px solid #C7C7C2", background: "#FFFFFF", padding: "0 14px", minHeight: 38, borderRadius: 8, fontSize: 13.5, fontWeight: 600 }}
+                  >
+                    {HIST_DEL[S.lang].all}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => set({ histSel: [], histConfirm: false, openHist: null })}
+                    style={{ border: "1px solid #C7C7C2", background: "#FFFFFF", padding: "0 14px", minHeight: 38, borderRadius: 8, fontSize: 13.5, fontWeight: 600 }}
+                  >
+                    {HIST_DEL[S.lang].select}
+                  </button>
+                ))}
             </div>
             {!history.length && (
               <div style={{ padding: "48px 22px", textAlign: "center", background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 11, boxShadow: shadowCard, color: "#5A5566", fontSize: 15 }}>{t.noHistory}</div>
             )}
             {history.map((h) => {
               const srcs = Array.from(new Set(h.lines.map((l) => l.srcName)));
-              const open = S.openHist === h.id;
+              const selecting = isManager && !!S.histSel;
+              const picked = !!S.histSel?.includes(h.id);
+              const open = !selecting && S.openHist === h.id;
               return (
-                <div key={h.id} style={{ background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 9, marginBottom: 10, overflow: "hidden", boxShadow: shadowCard }}>
-                  <div onClick={() => set((s) => ({ openHist: s.openHist === h.id ? null : h.id }))} style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: "pointer", minHeight: 64 }}>
+                <div key={h.id} style={{ background: picked ? "#FFF1E3" : "#FFFFFF", border: "1px solid " + (picked ? "#FF7A18" : "#E0E0DB"), borderRadius: 9, marginBottom: 10, overflow: "hidden", boxShadow: shadowCard }}>
+                  <div
+                    onClick={() =>
+                      selecting
+                        ? set((s) => ({ histConfirm: false, histSel: picked ? (s.histSel || []).filter((x) => x !== h.id) : [...(s.histSel || []), h.id] }))
+                        : set((s) => ({ openHist: s.openHist === h.id ? null : h.id }))
+                    }
+                    role={selecting ? "checkbox" : undefined}
+                    aria-checked={selecting ? picked : undefined}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: "pointer", minHeight: 64 }}
+                  >
+                    {selecting && (
+                      <div style={{ flex: "none", width: 26, height: 26, borderRadius: 7, border: "1.5px solid " + (picked ? "#FF7A18" : "#B4B4AF"), background: picked ? "#FF7A18" : "#FFFFFF", color: "#1C0D02", fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {picked ? "✓" : ""}
+                      </div>
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.014em" }}>{plural(h.lines.length, t.item, t.items)} · {plural(srcs.length, t.shop, t.shops)}</div>
                       <div style={{ fontSize: 12.5, color: "#5A5566", marginTop: 4, lineHeight: 1.4 }}>{fmt(h.closed_at)} · {t.by} {h.by} · {srcs.join(", ")}</div>
                     </div>
-                    <div style={{ color: "#606060", fontSize: 15, padding: 4, flex: "none" }}>{open ? "▴" : "▾"}</div>
+                    {!selecting && <div style={{ color: "#606060", fontSize: 15, padding: 4, flex: "none" }}>{open ? "▴" : "▾"}</div>}
                   </div>
                   {open && (
                     <div style={{ borderTop: "1px solid #E4E4E0", background: "#F7F7F5" }}>
@@ -1671,6 +1713,34 @@ export default function App() {
               );
             })}
             <div style={{ height: 28 }} />
+          </div>
+        )}
+
+        {/* HISTORY DELETE BAR */}
+        {isManager && isHistory && S.histSel && (
+          <div data-noprint="1" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 35, background: "#141218", color: "#FFFFFF", boxShadow: "0 -4px 12px -4px rgba(23,26,31,0.18),0 -18px 40px -16px rgba(23,26,31,0.40)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+            <div style={{ width: "100%", padding: "11px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => set({ histSel: null, histConfirm: false })} style={{ border: "1px solid #4A4656", background: "transparent", color: "#FFFFFF", fontSize: 15, fontWeight: 600, padding: "0 16px", minHeight: 52, borderRadius: 9, flex: "none" }}>
+                {t.cancel}
+              </button>
+              <button
+                disabled={!S.histSel.length}
+                onClick={() => {
+                  const ids = S.histSel || [];
+                  if (!ids.length) return;
+                  if (!S.histConfirm) return set({ histConfirm: true });
+                  store.remove("history", ids);
+                  set({ histSel: null, histConfirm: false, openHist: null });
+                  flash(HIST_DEL[S.lang].done);
+                }}
+                style={{
+                  flex: 1, border: 0, minHeight: 52, borderRadius: 9, fontSize: 15, fontWeight: 700, padding: "0 12px",
+                  background: S.histSel.length ? "#D70015" : "#2A2830", color: S.histSel.length ? "#FFFFFF" : "#8A84A0",
+                }}
+              >
+                {S.histConfirm ? HIST_DEL[S.lang].confirm : `${HIST_DEL[S.lang].del} (${S.histSel.length})`}
+              </button>
+            </div>
           </div>
         )}
 
