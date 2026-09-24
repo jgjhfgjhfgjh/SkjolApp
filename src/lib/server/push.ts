@@ -30,9 +30,18 @@ export const subId = (endpoint: string) => createHash("sha256").update(endpoint)
 
 export type SubRow = { id: string; endpoint: string; p256dh: string; auth: string; lang: string };
 
+const vapid = () =>
+  webpush.setVapidDetails("https://skjolapp.vercel.app", process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
+
+// One notification to one device (e.g. the "notifications are on" confirmation).
+export async function sendOne(sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: object) {
+  vapid();
+  await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: 600, urgency: "high" });
+}
+
 // Sends to every manager device; drops subscriptions the push service says are gone.
 export async function sendToManagers(build: (lang: string) => { title: string; body: string; url: string; tag: string }) {
-  webpush.setVapidDetails("https://skjolapp.vercel.app", process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!, process.env.VAPID_PRIVATE_KEY!);
+  vapid();
   const db = admin();
   const { data, error } = await db.from("push_subs").select("id,endpoint,p256dh,auth,lang").eq("role", "manager");
   if (error) throw error;
