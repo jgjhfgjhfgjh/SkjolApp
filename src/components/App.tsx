@@ -77,6 +77,17 @@ function loadUI(): UI {
   return def;
 }
 
+const INSTALL_LABEL: Record<Lang, string> = {
+  en: "Install on this device",
+  is: "Setja upp á tækinu",
+  cs: "Instalovat do zařízení",
+  pl: "Zainstaluj na urządzeniu",
+};
+// Installed PWA (home-screen icon) — hide the install link there.
+const standalone =
+  typeof window !== "undefined" &&
+  (window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true);
+
 const SWW = 144;
 const pad2 = (n: number) => (n < 10 ? "0" : "") + n;
 const shadowCard = "0 1px 2px rgba(23,26,31,0.05),0 6px 16px -8px rgba(23,26,31,0.14)";
@@ -767,6 +778,12 @@ export default function App() {
           <div style={{ ...tab, flex: "none", padding: "0 clamp(16px,3vw,32px) 10px", fontSize: 12, color: "#8E8E93", textAlign: "center" }}>
             {history.length ? t.lastOrder + " · " + fmt(history[0].closed_at) : t.noOrders}
             {db.mode === "local" && <span style={{ color: "#AEAEB2" }}> · offline demo</span>}
+            {!standalone && (
+              <>
+                {" · "}
+                <a href="/install" style={{ fontWeight: 600 }}>{INSTALL_LABEL[S.lang]}</a>
+              </>
+            )}
           </div>
         </div>
       </div>
