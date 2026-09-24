@@ -6,7 +6,13 @@ export const metadata: Metadata = {
   description: "Kitchen and bar record what ran out; Gústi buys it.",
   applicationName: "SKJÓL",
   appleWebApp: { capable: true, title: "SKJÓL", statusBarStyle: "default" },
-  icons: { apple: "/icons/180" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/32", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/icons/180",
+  },
 };
 
 export const viewport: Viewport = {

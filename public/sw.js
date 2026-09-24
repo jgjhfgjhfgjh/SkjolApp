@@ -2,7 +2,7 @@
 // Pages: network-first (fresh deploys win), fall back to cache.
 // Build assets (/_next/static, icons): cache-first — their URLs are content-hashed.
 // Supabase and /api calls are never cached.
-const CACHE = "skjol-v1";
+const CACHE = "skjol-v2";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/"])).then(() => self.skipWaiting()));

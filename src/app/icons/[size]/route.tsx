@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 // PWA / home-screen icons: the orange SKJÓL tile. `512m` is the maskable variant
 // (extra padding so Android's circle crop keeps the mark intact).
 const SIZES: Record<string, { px: number; pad: number }> = {
+  "32": { px: 32, pad: 0 },
   "180": { px: 180, pad: 0 },
   "192": { px: 192, pad: 0 },
   "512": { px: 512, pad: 0 },
