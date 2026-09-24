@@ -1476,18 +1476,18 @@ export default function App() {
                           textAlign: "left", border: "1.5px solid " + (on ? "#141218" : all ? "#E0E0DB" : "#C9480F"),
                           background: all ? "#F1F1EF" : "linear-gradient(180deg,#F57A45 0%,#E0531C 100%)", borderRadius: 10,
                           boxShadow: all ? "0 1px 2px rgba(23,26,31,0.06)" : "0 1px 0 rgba(255,255,255,0.25) inset, 0 -2px 0 rgba(0,0,0,0.12) inset, 0 2px 4px rgba(180,70,20,0.25), 0 10px 22px -8px rgba(180,70,20,0.45)",
-                          padding: "13px 13px 12px", display: "flex", flexDirection: "column", gap: 10, minHeight: 96,
+                          padding: "14px 14px 13px", display: "flex", flexDirection: "column", gap: 10, minHeight: 138,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, width: "100%" }}>
-                          <div style={{ fontSize: 15.5, fontWeight: 600, letterSpacing: "-0.014em", flex: 1, minWidth: 0, lineHeight: 1.2, color: all ? "#4A4850" : "#FFFFFF" }}>{s?.name || sid}</div>
-                          <div style={{ ...tab, fontSize: 14, fontWeight: 600, color: all ? "#6E6B75" : "#FFFFFF" }}>{rows.length - doneN}/{rows.length}</div>
-                        </div>
+                        {/* Big shop name + big count of what is still left there (counts down; ✓ when done). */}
+                        <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.1, color: all ? "#4A4850" : "#FFFFFF", overflowWrap: "anywhere" }}>{s?.name || sid}</div>
                         <div style={{ flex: 1 }} />
-                        <div style={{ width: "100%", height: 4, background: all ? "#E0E0DB" : "rgba(255,255,255,0.28)", borderRadius: 2, overflow: "hidden" }}>
-                          <div style={{ height: 4, background: all ? "#A8A5AE" : "#FFFFFF", width: Math.round((doneN / rows.length) * 100) + "%" }} />
+                        <div aria-label={all ? t.done : rows.length - doneN + " " + t.left} style={{ ...tab, fontSize: 46, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 0.95, color: all ? "#8E8E93" : "#FFFFFF" }}>
+                          {all ? "✓" : rows.length - doneN}
                         </div>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: all ? "#6E6B75" : "#FFF0E6" }}>{all ? t.done : rows.length - doneN + " " + t.left}</div>
+                        <div style={{ width: "100%", height: 4, background: all ? "#E0E0DB" : "rgba(255,255,255,0.28)", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ height: 4, background: all ? "#A8A5AE" : "#FFFFFF", width: Math.round((doneN / rows.length) * 100) + "%", transition: "width .25s ease" }} />
+                        </div>
                       </button>
                     );
                   })}
