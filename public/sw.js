@@ -2,7 +2,7 @@
 // Pages: network-first (fresh deploys win), fall back to cache.
 // Build assets (/_next/static, icons): cache-first — their URLs are content-hashed.
 // Supabase and /api calls are never cached.
-const CACHE = "skjol-v2";
+const CACHE = "skjol-v3";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/"])).then(() => self.skipWaiting()));
@@ -50,4 +50,33 @@ self.addEventListener("fetch", (e) => {
       ),
     );
   }
+});
+
+// New-order notifications for Gústi's devices.
+self.addEventListener("push", (e) => {
+  let d = {};
+  try {
+    d = e.data ? e.data.json() : {};
+  } catch {}
+  e.waitUntil(
+    self.registration.showNotification(d.title || "SKJÓL", {
+      body: d.body || "",
+      icon: "/icons/192",
+      tag: d.tag || "order",
+      renotify: true,
+      data: { url: d.url || "/" },
+    }),
+  );
+});
+
+// Tap: bring an open SKJÓL window forward, otherwise open the Buy screen.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "/";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => new URL(c.url).origin === self.location.origin);
+      return open ? open.focus() : self.clients.openWindow(url);
+    }),
+  );
 });

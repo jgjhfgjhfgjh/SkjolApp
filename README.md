@@ -33,6 +33,18 @@ footer shows "offline demo" in that mode.
    - `MANAGER_PIN` — Gústi's 4-digit code (server-side only; default `1234`)
 4. Set the same variables in Vercel → Project → Environment Variables.
 
+## Notifications (Web Push)
+
+Gústi's devices get a notification when the kitchen or bar sends a list.
+
+- Env: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (generate with
+  `npx web-push generate-vapid-keys`) and `SUPABASE_SERVICE_ROLE_KEY`.
+- Table `push_subs` (`supabase/migrations/0002_push_subs.sql`) is server-only.
+- Gústi turns notifications on from the Buy screen (a tap is required; on
+  iPhone/iPad the app must be installed to the home screen first, iOS 16.4+).
+- After a send, the station calls `/api/push/notify`; the server builds the
+  message from the database, not from the request.
+
 ## Data model
 
 | table          | what                                                                      |

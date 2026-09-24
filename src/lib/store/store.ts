@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { localDriver, supabaseDriver } from "./drivers";
 import { TABLES, type Driver, type TableName, type Tables } from "./types";
 
-type Pending<T> = { row: T | null; seq: number; doneAt: number | null };
+type Pending<T> = { row: T | null; seq: number; doneAt: number | null; waiters: (() => void)[] };
 
 export type Snapshot = {
   [K in TableName]: Tables[K][];
@@ -93,22 +93,29 @@ class Store {
     this.emit();
   }
 
-  upsert<K extends TableName>(t: K, rows: Tables[K][], delay = 0) {
-    rows.forEach((r) => this.put(t, r.id, r, delay));
+  // Both resolve once every row has reached the server (retries included).
+  upsert<K extends TableName>(t: K, rows: Tables[K][], delay = 0): Promise<void> {
+    const done = Promise.all(rows.map((r) => this.put(t, r.id, r, delay))).then(() => {});
     this.emit();
+    return done;
   }
 
-  remove(t: TableName, ids: string[]) {
-    ids.forEach((id) => this.put(t, id, null, 0));
+  remove(t: TableName, ids: string[]): Promise<void> {
+    const done = Promise.all(ids.map((id) => this.put(t, id, null, 0))).then(() => {});
     this.emit();
+    return done;
   }
 
-  private put<K extends TableName>(t: K, id: string, row: Tables[K] | null, delay: number) {
+  private put<K extends TableName>(t: K, id: string, row: Tables[K] | null, delay: number): Promise<void> {
     const seq = ++this.seq;
-    this.overlay[t].set(id, { row, seq, doneAt: null });
+    const prev = this.overlay[t].get(id);
+    const waiters = prev && prev.doneAt === null ? prev.waiters : [];
+    const done = new Promise<void>((res) => waiters.push(res));
+    this.overlay[t].set(id, { row, seq, doneAt: null, waiters });
     const key = t + "|" + id;
     clearTimeout(this.timers.get(key));
     this.timers.set(key, setTimeout(() => this.flush(t, id), delay));
+    return done;
   }
 
   private async flush<K extends TableName>(t: K, id: string) {
@@ -119,7 +126,10 @@ class Store {
       if (p.row) await this.driver.upsert(t, [p.row]);
       else await this.driver.remove(t, [id]);
       const cur = this.overlay[t].get(id);
-      if (cur && cur.seq === seq) cur.doneAt = Date.now();
+      if (cur && cur.seq === seq) {
+        cur.doneAt = Date.now();
+        cur.waiters.splice(0).forEach((w) => w());
+      }
       this.online = true;
       if (this.driver.mode === "local") this.scheduleRefresh(t);
     } catch {

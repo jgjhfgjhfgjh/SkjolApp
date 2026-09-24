@@ -17,6 +17,7 @@ import {
 import { LANGS, T, type Lang } from "@/lib/i18n";
 import { getStore, useStore } from "@/lib/store/store";
 import Splash from "./Splash";
+import { disablePush, enablePush, notifyManagers, pushState, saveManagerToken, type PushState } from "@/lib/push-client";
 import type { HistLine, LineRow, PrefRow } from "@/lib/store/types";
 
 // ---------- device-local UI state (never shared) ----------
@@ -83,6 +84,28 @@ const INSTALL_LABEL: Record<Lang, string> = {
   is: "Setja upp á tækinu",
   cs: "Instalovat do zařízení",
   pl: "Zainstaluj na urządzeniu",
+};
+const NOTIF: Record<Lang, { title: string; sub: string; on: string; done: string; off: string; denied: string; install: string; err: string }> = {
+  en: {
+    title: "Notifications for new orders", sub: "Get a ping on this device when the kitchen or bar sends a list.", on: "Turn on",
+    done: "Notifications are on", off: "Turn off", denied: "Notifications are blocked. Allow them for SKJÓL in the phone settings.",
+    install: "On iPhone and iPad, add the app to the home screen first, then turn notifications on here.", err: "Couldn't turn on notifications — try again.",
+  },
+  is: {
+    title: "Tilkynningar um nýjar pantanir", sub: "Fáðu tilkynningu í þetta tæki þegar eldhúsið eða barinn sendir lista.", on: "Kveikja",
+    done: "Kveikt er á tilkynningum", off: "Slökkva", denied: "Lokað er fyrir tilkynningar. Leyfðu þær fyrir SKJÓL í stillingum símans.",
+    install: "Á iPhone og iPad skaltu fyrst setja appið á heimaskjáinn og kveikja svo á tilkynningum hér.", err: "Ekki tókst að kveikja á tilkynningum — reyndu aftur.",
+  },
+  cs: {
+    title: "Upozornění na nové objednávky", sub: "Ať tohle zařízení pípne, když kuchyně nebo bar pošle seznam.", on: "Zapnout",
+    done: "Upozornění jsou zapnutá", off: "Vypnout", denied: "Upozornění jsou zablokovaná. Povolte je pro SKJÓL v nastavení telefonu.",
+    install: "Na iPhonu a iPadu nejdřív přidejte aplikaci na plochu, pak tu upozornění zapněte.", err: "Upozornění se nepodařilo zapnout — zkuste to znovu.",
+  },
+  pl: {
+    title: "Powiadomienia o nowych zamówieniach", sub: "Niech to urządzenie da znać, gdy kuchnia lub bar wyśle listę.", on: "Włącz",
+    done: "Powiadomienia są włączone", off: "Wyłącz", denied: "Powiadomienia są zablokowane. Zezwól na nie dla SKJÓL w ustawieniach telefonu.",
+    install: "Na iPhonie i iPadzie najpierw dodaj aplikację do ekranu głównego, potem włącz tu powiadomienia.", err: "Nie udało się włączyć powiadomień — spróbuj ponownie.",
+  },
 };
 const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
 const SHARE_TEXT: Record<Lang, string> = {
@@ -185,11 +208,11 @@ export default function App() {
       return r ? { ...s, ...r } : s;
     });
 
-  // Launch screen: stays until shared data is loaded (at least ~1.2 s after start, at most 5 s), then fades.
+  // Launch screen: at least ~2.6 s after start and 1.4 s on screen, until shared data is loaded (at most 6 s), then fades.
   const [splash, setSplash] = useState<"on" | "leaving" | "off">("on");
   useEffect(() => {
     const since = performance.now();
-    const wait = db.ready ? Math.max(0, 1200 - since) : Math.max(0, 5000 - since);
+    const wait = db.ready ? Math.max(1400, 2600 - since) : Math.max(1400, 6000 - since);
     const t1 = setTimeout(() => setSplash((v) => (v === "on" ? "leaving" : v)), wait);
     const t2 = setTimeout(() => setSplash("off"), wait + 380);
     return () => {
@@ -342,7 +365,9 @@ export default function App() {
     let ok = false;
     try {
       const r = await fetch("/api/pin", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin: v }) });
-      ok = r.ok && (await r.json()).ok === true;
+      const res = r.ok ? await r.json() : null;
+      ok = res?.ok === true;
+      if (ok) saveManagerToken(res.token);
       if (ok) localStorage.setItem("skjol.mgr", await sha(v));
     } catch {
       // offline: accept the last code verified on this device
@@ -451,8 +476,10 @@ export default function App() {
         supplier: old?.supplier || "", sent_at: now, sent_by: S.author || "—",
       };
     });
-    store.upsert("lines", rows);
-    store.remove("lines", ids.map((id) => draft[id].id));
+    const written = Promise.all([store.upsert("lines", rows), store.remove("lines", ids.map((id) => draft[id].id))]);
+    // Ping Gústi once the lines are really in the database.
+    const st = station;
+    written.then(() => notifyManagers(st));
     set({ expanded: null });
     flash(t.tSent);
   }
@@ -576,6 +603,25 @@ export default function App() {
   const isFav = isEntry && S.tab === "fav";
   const isOrder = isEntry && (S.tab === "order" || isFav);
   const isBuy = isManager && S.tab === "buy";
+  const [push, setPush] = useState<PushState>("hidden");
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    if (!isManager) return;
+    let live = true;
+    pushState(S.lang).then((v) => live && setPush(v));
+    return () => {
+      live = false;
+    };
+  }, [isManager, S.lang]);
+  async function togglePush(on: boolean) {
+    setPushBusy(true);
+    try {
+      setPush(on ? await enablePush(S.lang) : await disablePush());
+    } catch {
+      flash(NOTIF[S.lang].err);
+    }
+    setPushBusy(false);
+  }
   const isHistory = !!role && S.tab === "history";
   const q = S.query.trim().toLowerCase();
   const draftIds = Object.keys(draft);
@@ -1258,6 +1304,33 @@ export default function App() {
         {/* BUY */}
         {isBuy && (
           <div style={{ width: "100%", padding: "0 16px" }}>
+            {push !== "hidden" && (
+              <div data-noprint="1" style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: push === "on" ? "#FFFFFF" : "#FFF1E3", border: "1px solid " + (push === "on" ? "#E0E0DB" : "#FFC489"), borderRadius: 11, boxShadow: shadowCard }}>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={push === "on" ? "#2E9B57" : "#C24A00"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none" }}>
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#2E2C33" }}>{push === "on" ? NOTIF[S.lang].done : NOTIF[S.lang].title}</div>
+                  {push !== "on" && (
+                    <div style={{ fontSize: 13, color: "#6C6C70", marginTop: 3, lineHeight: 1.4 }}>
+                      {push === "denied" ? NOTIF[S.lang].denied : push === "needs-install" ? NOTIF[S.lang].install : NOTIF[S.lang].sub}
+                    </div>
+                  )}
+                </div>
+                {(push === "off" || push === "on") && (
+                  <button
+                    onClick={() => togglePush(push === "off")}
+                    disabled={pushBusy}
+                    style={push === "off"
+                      ? { flex: "none", border: 0, background: "#FF7A18", color: "#1C0D02", fontSize: 14, fontWeight: 700, padding: "0 16px", minHeight: 44, borderRadius: 9, opacity: pushBusy ? 0.6 : 1 }
+                      : { flex: "none", border: "1px solid #C7C7C2", background: "transparent", color: "#545454", fontSize: 13, fontWeight: 600, padding: "0 12px", minHeight: 40, borderRadius: 8, opacity: pushBusy ? 0.6 : 1 }}
+                  >
+                    {push === "off" ? NOTIF[S.lang].on : NOTIF[S.lang].off}
+                  </button>
+                )}
+              </div>
+            )}
             {!order ? (
               <div style={{ marginTop: 40, padding: "52px 22px", textAlign: "center", background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 11, boxShadow: shadowCard }}>
                 <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: "-0.022em" }}>{t.nothingSent}</div>
