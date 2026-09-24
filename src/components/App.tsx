@@ -61,7 +61,7 @@ type UI = {
 };
 
 const UI_KEY = "skjol.ui.v1";
-const PERSIST: (keyof UI)[] = ["role", "tab", "lang", "scope", "view", "filter", "groupSupplier", "buySrc"];
+const PERSIST: (keyof UI)[] = ["tab", "lang", "scope", "view", "filter", "groupSupplier", "buySrc"];
 
 function loadUI(): UI {
   const def: UI = {
@@ -76,9 +76,9 @@ function loadUI(): UI {
     const p = JSON.parse(localStorage.getItem(UI_KEY) || "null");
     if (p) {
       Object.assign(def, p);
-      // The manager must re-enter the PIN after a reload; stations re-enter their name.
-      if (def.role === "manager") def.role = null;
-      def.namePrompt = def.role === "kitchen" || def.role === "bar";
+      // Every fresh start opens the gate: stations ask for the name only once picked, Gústi re-enters the PIN.
+      def.role = null;
+      def.namePrompt = false;
     }
   } catch {}
   return def;
@@ -1671,8 +1671,8 @@ export default function App() {
 
         {/* NAME PROMPT */}
         {npOpen && (
-          <div data-noprint="1" style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(28,28,30,0.45)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "max(10vh,env(safe-area-inset-top)) 16px 16px" }}>
-            <div role="dialog" aria-modal="true" aria-labelledby="np-title" style={{ width: "100%", maxWidth: 440, background: "#FFFFFF", borderRadius: 22, padding: "24px 20px 18px", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.45)", animation: "rise .18s ease" }}>
+          <div data-noprint="1" style={{ position: "fixed", inset: 0, zIndex: 80, background: "transparent", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "max(10vh,env(safe-area-inset-top)) 16px 16px" }}>
+            <div role="dialog" aria-modal="true" aria-labelledby="np-title" style={{ width: "100%", maxWidth: 440, background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 22, padding: "24px 20px 18px", boxShadow: "0 2px 6px rgba(23,26,31,0.10),0 24px 60px -16px rgba(23,26,31,0.45)", animation: "rise .18s ease" }}>
               <div id="np-title" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em", color: "#2E2C33", lineHeight: 1.15 }}>{t.npTitle}</div>
               <div style={{ fontSize: 15, color: "#6C6C70", marginTop: 8, lineHeight: 1.45, textWrap: "pretty" }}>{t.npSub}</div>
               <div style={{ marginTop: 18, display: "flex", alignItems: "center", background: "#F2F2F7", borderRadius: 12, padding: "0 14px", height: 54, border: "2px solid #FF7A18" }}>
