@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {}
-  if (!checkManagerToken(body.token)) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
+  if (!(await checkManagerToken(body.token))) return Response.json({ ok: false, error: "forbidden" }, { status: 403 });
   const s = body.subscription;
   if (!s?.endpoint || !s.keys?.p256dh || !s.keys?.auth || !/^https:\/\//.test(s.endpoint)) {
     return Response.json({ ok: false, error: "bad-subscription" }, { status: 400 });

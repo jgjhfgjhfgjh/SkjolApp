@@ -60,7 +60,7 @@ export type PrefRow = {
 export type FavRow = { id: string; station: Station; item_id: string };
 
 // Shops/suppliers staff added themselves; synced to all devices, listed under the station that created them.
-export type CustomShopRow = { id: string; name: string; station: Station; created_by: string; created_at: number };
+export type CustomShopRow = { id: string; name: string; station: Station; created_by: string; created_at: number; url?: string | null };
 
 export type Tables = {
   lines: LineRow;

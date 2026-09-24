@@ -13,6 +13,7 @@ export function saveManagerToken(t: string | undefined) {
     if (t) localStorage.setItem(TOKEN, t);
   } catch {}
 }
+export const managerTokenValue = () => token();
 const token = () => {
   try {
     return localStorage.getItem(TOKEN) || "";

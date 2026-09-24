@@ -17,13 +17,14 @@ import {
 import { LANGS, T, type Lang } from "@/lib/i18n";
 import { getStore, useStore } from "@/lib/store/store";
 import Splash from "./Splash";
+import Settings, { settingsTitle } from "./Settings";
 import { disablePush, enablePush, notifyManagers, pushState, saveManagerToken, type PushState } from "@/lib/push-client";
 import type { HistLine, LineRow, PrefRow } from "@/lib/store/types";
 
 // ---------- device-local UI state (never shared) ----------
 type UI = {
   role: Role | null;
-  tab: "order" | "fav" | "history" | "buy";
+  tab: "order" | "fav" | "history" | "buy" | "settings";
   lang: Lang;
   scope: string;
   cat: string | null;
@@ -294,7 +295,7 @@ export default function App() {
   const SHOPS: Shop[] = useMemo(() => {
     const extra = [...db.custom_shops]
       .sort((a, b) => a.created_at - b.created_at)
-      .map((c) => ({ id: c.id, name: c.name, url: null, known: true, adhoc: false, groups: [] }));
+      .map((c) => ({ id: c.id, name: c.name, url: c.url || null, known: true, adhoc: false, groups: [] }));
     return BASE_SHOPS.filter((x) => !x.adhoc).concat(extra, BASE_SHOPS.filter((x) => x.adhoc));
   }, [db.custom_shops]);
   const shopById = (id: string) => SHOPS.find((x) => x.id === id);
@@ -624,6 +625,7 @@ export default function App() {
   const isFav = isEntry && S.tab === "fav";
   const isOrder = isEntry && (S.tab === "order" || isFav);
   const isBuy = isManager && S.tab === "buy";
+  const isSettings = isManager && S.tab === "settings";
   const [push, setPush] = useState<PushState>("hidden");
   const [pushBusy, setPushBusy] = useState(false);
   useEffect(() => {
@@ -642,6 +644,22 @@ export default function App() {
       flash(NOTIF[S.lang].err);
     }
     setPushBusy(false);
+  }
+
+  // ---------- Settings actions (Gústi) ----------
+  const signOut = () => set({ role: null, expanded: null, query: "", cat: null, author: "", nameErr: false, swiped: null, addOpen: false, searchOpen: false });
+  function addShopFor(name: string, st: Station) {
+    const dup = db.custom_shops.find((c) => c.station === st && c.name.toLowerCase() === name.toLowerCase());
+    if (dup) return;
+    const id = "u" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    store.upsert("custom_shops", [{ id, name, station: st, created_by: "Gústi", created_at: Date.now(), url: null }]);
+  }
+  // Items of a deleted shop fall back to the ad-hoc bucket so nothing disappears.
+  function deleteShop(id: string) {
+    const moved = db.custom_items.filter((c) => c.src === id).map((c) => ({ ...c, src: "other" }));
+    if (moved.length) store.upsert("custom_items", moved);
+    db.item_prefs.filter((p) => p.src_override === id).forEach((p) => setPref(p.id, { src_override: null }));
+    store.remove("custom_shops", [id]);
   }
   const isHistory = !!role && S.tab === "history";
   const q = S.query.trim().toLowerCase();
@@ -915,7 +933,7 @@ export default function App() {
   // ---------- ROLE SCREENS ----------
   const tabDefs = isEntry
     ? [{ id: "order", label: t.tabOrder, count: draftIds.length }, { id: "fav", label: t.tabFav, count: 0 }, { id: "history", label: t.tabHist, count: 0 }]
-    : [{ id: "buy", label: t.tabBuy, count: pendingCount }, { id: "history", label: t.tabHist, count: 0 }];
+    : [{ id: "buy", label: t.tabBuy, count: pendingCount }, { id: "history", label: t.tabHist, count: 0 }, { id: "settings", label: settingsTitle(S.lang), count: 0 }];
 
   const renderRow = (it: Item, i: number, items: Item[]) => {
     const l = draft[it.id], qty = l ? l.qty : 0, unit = l ? l.unit : "pcs";
@@ -1385,29 +1403,26 @@ export default function App() {
         {/* BUY */}
         {isBuy && (
           <div style={{ width: "100%", padding: "0 16px" }}>
-            {push !== "hidden" && (
-              <div data-noprint="1" style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: push === "on" ? "#FFFFFF" : "#FFF1E3", border: "1px solid " + (push === "on" ? "#E0E0DB" : "#FFC489"), borderRadius: 11, boxShadow: shadowCard }}>
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={push === "on" ? "#2E9B57" : "#C24A00"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none" }}>
+            {/* Prompt only while notifications are not on; full control lives in Settings. */}
+            {(push === "off" || push === "denied" || push === "needs-install") && (
+              <div data-noprint="1" style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#FFF1E3", border: "1px solid #FFC489", borderRadius: 11, boxShadow: shadowCard }}>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#C24A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none" }}>
                   <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                   <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                 </svg>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#2E2C33" }}>{push === "on" ? NOTIF[S.lang].done : NOTIF[S.lang].title}</div>
-                  {push !== "on" && (
-                    <div style={{ fontSize: 13, color: "#6C6C70", marginTop: 3, lineHeight: 1.4 }}>
-                      {push === "denied" ? NOTIF[S.lang].denied : push === "needs-install" ? NOTIF[S.lang].install : NOTIF[S.lang].sub}
-                    </div>
-                  )}
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#2E2C33" }}>{NOTIF[S.lang].title}</div>
+                  <div style={{ fontSize: 13, color: "#6C6C70", marginTop: 3, lineHeight: 1.4 }}>
+                    {push === "denied" ? NOTIF[S.lang].denied : push === "needs-install" ? NOTIF[S.lang].install : NOTIF[S.lang].sub}
+                  </div>
                 </div>
-                {(push === "off" || push === "on") && (
+                {push === "off" && (
                   <button
-                    onClick={() => togglePush(push === "off")}
+                    onClick={() => togglePush(true)}
                     disabled={pushBusy}
-                    style={push === "off"
-                      ? { flex: "none", border: 0, background: "#FF7A18", color: "#1C0D02", fontSize: 14, fontWeight: 700, padding: "0 16px", minHeight: 44, borderRadius: 9, opacity: pushBusy ? 0.6 : 1 }
-                      : { flex: "none", border: "1px solid #C7C7C2", background: "transparent", color: "#545454", fontSize: 13, fontWeight: 600, padding: "0 12px", minHeight: 40, borderRadius: 8, opacity: pushBusy ? 0.6 : 1 }}
+                    style={{ flex: "none", border: 0, background: "#FF7A18", color: "#1C0D02", fontSize: 14, fontWeight: 700, padding: "0 16px", minHeight: 44, borderRadius: 9, opacity: pushBusy ? 0.6 : 1 }}
                   >
-                    {push === "off" ? NOTIF[S.lang].on : NOTIF[S.lang].off}
+                    {NOTIF[S.lang].on}
                   </button>
                 )}
               </div>
@@ -1590,6 +1605,29 @@ export default function App() {
               </>
             )}
           </div>
+        )}
+
+        {/* SETTINGS */}
+        {isSettings && (
+          <Settings
+            lang={S.lang}
+            t={t}
+            shops={[...db.custom_shops].sort((a, b) => a.created_at - b.created_at)}
+            hidden={ITEMS.concat(custom)
+              .filter((i) => isHidden(i.id))
+              .map((i) => ({ id: i.id, name: nameOf(i), shop: shopById(srcOf(i))?.name || "—" }))}
+            push={push}
+            pushBusy={pushBusy}
+            pushLabels={NOTIF[S.lang]}
+            onPush={togglePush}
+            onSaveShop={(row) => store.upsert("custom_shops", [row])}
+            onAddShop={addShopFor}
+            onDeleteShop={deleteShop}
+            onRestore={(id) => setPref(id, { hidden: false })}
+            onShareInstall={shareInstall}
+            onSignOut={signOut}
+            flash={flash}
+          />
         )}
 
         {/* HISTORY */}
