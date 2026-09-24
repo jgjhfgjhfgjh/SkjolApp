@@ -1,0 +1,377 @@
+[
+ {
+  "id": "garri",
+  "name": "Garri.is",
+  "url": "https://garri.is",
+  "known": true,
+  "groups": [
+   [
+    "Pizza & Bakery",
+    [
+     "Pizza dough",
+     "Pomodoro pizza 2.98kg",
+     "Soup buns",
+     "Burger buns",
+     "Ladyfingers",
+     "Flour Kronax Red"
+    ]
+   ],
+   [
+    "Meat & Fish",
+    [
+     "Fish stew",
+     "Fish and chips"
+    ]
+   ],
+   [
+    "Cheese & Dairy",
+    [
+     "Parmesan (grated)",
+     "Vegan cheese",
+     "Heavy cream",
+     "UHT milk"
+    ]
+   ],
+   [
+    "Sauces & Condiments",
+    [
+     "Ketchup",
+     "Mustard Dijon",
+     "Barbecue sauce",
+     "Cocktail sauce",
+     "Béarnaise sauce",
+     "Vegan aioli",
+     "Vegan chili mayo",
+     "Balsamico crema",
+     "Aceto balsamico",
+     "Truffle olive oil",
+     "Oil with chili",
+     "Oil with basilico",
+     "Oil with garlic (salad)",
+     "Oil spray for baking",
+     "Oil 10L",
+     "Oil 20L"
+    ]
+   ],
+   [
+    "Spices & Seasonings",
+    [
+     "Oregano",
+     "Chilli flakes",
+     "French fries seasoning",
+     "Salt flakes",
+     "Black pepper",
+     "Green pepper (whole)",
+     "Garlic in oil",
+     "Sugar",
+     "Croutons",
+     "Sesame seeds"
+    ]
+   ],
+   [
+    "Vegetables & Fresh Produce",
+    [
+     "Jalapeño",
+     "Pumpkin seeds",
+     "Frozen pumpkin",
+     "Pineapple (ananas)"
+    ]
+   ],
+   [
+    "Frozen & Potato Products",
+    [
+     "French fries",
+     "Frozen sweet potato fries"
+    ]
+   ],
+   [
+    "Vegan & Alternatives",
+    [
+     "Vegan burger meat",
+     "Vegan cheese",
+     "Vegan aioli",
+     "Vegan chili mayo"
+    ]
+   ],
+   [
+    "Desserts & Other Ingredients",
+    [
+     "Cocoa",
+     "Chocolate flakes",
+     "Raspberry jelly",
+     "Coconut milk 400ml",
+     "Coconut milk 2.9L",
+     "Honig (honey)",
+     "Lemon juice (Citror)"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "ms",
+  "name": "MS.is",
+  "url": "https://ms.is",
+  "known": true,
+  "groups": [
+   [
+    "Cheese & Dairy",
+    [
+     "Mozzarella (pizza)",
+     "Cheddar slices",
+     "Cream cheese",
+     "Salad cheese",
+     "Blue cheese",
+     "Camembert",
+     "Pepper cheese",
+     "Cream 500ml",
+     "Cream 1000ml",
+     "Butter 10g",
+     "Butter 250g",
+     "Fresh milk",
+     "Mascarpone 200g"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "mata",
+  "name": "Matastraeti.is",
+  "url": "https://matastraeti.is",
+  "known": true,
+  "groups": [
+   [
+    "Pizza & Bakery",
+    [
+     "Rye bread"
+    ]
+   ],
+   [
+    "Meat & Fish",
+    [
+     "Chicken for salad",
+     "Chicken meat (pizza)",
+     "Burger meat",
+     "Bacon",
+     "Ham",
+     "Pepperoni salami",
+     "Meat soup",
+     [
+      "Some kinds of meats for menu",
+      "lamb · chicken · pork"
+     ]
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "farm",
+  "name": "Farm",
+  "url": null,
+  "known": true,
+  "groups": [
+   [
+    "Vegetables & Fresh Produce",
+    [
+     "Tomatoes (big)",
+     "Cherry tomatoes",
+     "Sweet peppers",
+     "Mushrooms",
+     "Salad frisée",
+     "Salad lollo rosso",
+     "Salad lollo biondo"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "bonus",
+  "name": "Bónus",
+  "url": "https://bonus.is",
+  "known": true,
+  "groups": [
+   [
+    "Cheese & Dairy",
+    [
+     "Cream 500ml",
+     "Cream 1000ml"
+    ]
+   ],
+   [
+    "Vegetables & Fresh Produce",
+    [
+     "Red onions",
+     "Lemons"
+    ]
+   ],
+   [
+    "Vegan & Alternatives",
+    [
+     "Tofu"
+    ]
+   ],
+   [
+    "Desserts & Other Ingredients",
+    [
+     "Ice cream"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "bar",
+  "name": "Bar",
+  "url": null,
+  "known": false,
+  "groups": [
+   [
+    "Soft drinks",
+    [
+     "Pepsi can",
+     "Pepsi bottle",
+     "Pepsi Max can",
+     "Pepsi Max bottle",
+     "Appelsín can",
+     "Appelsín bottle",
+     "Appelsín Zero can",
+     "Appelsín Zero bottle",
+     "7up bottle",
+     "7up Zero bottle",
+     "Floridana appelsínu",
+     "Floridana eplja",
+     "Kristall bottle",
+     "Gatorade blue",
+     "Gatorade red",
+     "Gatorade yellow",
+     "Sódavatn can",
+     "Red Bull"
+    ]
+   ],
+   [
+    "Spirits",
+    [
+     "Brennivín",
+     "Loki vodka",
+     "Aperol",
+     "Disaronno",
+     "Tia Maria",
+     "Hvítserkur rum",
+     "Pampero rum",
+     "Stuðlaberg gin",
+     "Stuðlaberg pink gin",
+     "Jägermeister",
+     "Campari",
+     "Sierra tequila blanco",
+     "Espolòn tequila reposado",
+     "Espolòn tequila blanco",
+     "Baileys",
+     "Bulleit bourbon whiskey",
+     "Bulleit bourbon rye whiskey",
+     "Bulleit bourbon 10 whiskey",
+     "Johnnie Walker whiskey"
+    ]
+   ],
+   [
+    "Wine & Prosecco",
+    [
+     "M. Pinot Grigio 187ml",
+     "M. Pinot Grigio 750ml",
+     "Last Stand Chard. 750ml",
+     "M. Nero d'Avola 187ml",
+     "M. Nero d'Avola 750ml",
+     "L. Shiraz Cab 750ml",
+     "R. Bilbao Limited 750ml",
+     "P. Prosecco 187ml",
+     "P. Prosecco 750ml"
+    ]
+   ],
+   [
+    "Beer",
+    [
+     "Tap Carlsberg",
+     "Tap Tuborg",
+     "Tap Gull",
+     "Tap Borg",
+     "Borg glass",
+     "Carlsberg 0 glass",
+     "Boli glass",
+     "Gull can",
+     "Boli can",
+     "Carlsberg glass",
+     "LOV",
+     "VES, GG"
+    ]
+   ],
+   [
+    "Snacks",
+    [
+     "Corny banana",
+     "Corny chocolate",
+     "Mars",
+     "Snickers",
+     "Lays small",
+     "Lays big"
+    ]
+   ],
+   [
+    "Hot drinks & Chocolate",
+    [
+     "Tea green tea",
+     "Tea camomile",
+     "Tea blackberry & raspberry",
+     "Tea decaffeinated",
+     "Tea pure mint",
+     "Tea Earl Grey",
+     "Tea lemon ginger",
+     "Coffee caps single",
+     "Coffee caps double",
+     "Chocolate drink",
+     "Icelandic chocolate blueberry salt",
+     "Icelandic chocolate dark",
+     "Icelandic chocolate milk",
+     "Icelandic chocolate volcano dark",
+     "Icelandic chocolate volcano Reykjanes",
+     "Icelandic chocolate caramel"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "supplies",
+  "name": "Chemicals & Cleaning",
+  "url": null,
+  "known": false,
+  "groups": [
+   [
+    "Cleaning & Supplies",
+    [
+     "Gloves",
+     "Sponge",
+     "Soap hand",
+     "Soap for dish",
+     "Fat & Easy",
+     "Purina fat loose",
+     "Trash bags big",
+     "Trash bags small",
+     "Paper rolls",
+     "Convotherm red",
+     "Convotherm green",
+     "Cleaner for glass",
+     "Polish",
+     "Toilet paper big rolls",
+     "Toilet paper small rolls",
+     "Soap for dispensers",
+     "Chemicals for dish machine",
+     "Napkins"
+    ]
+   ]
+  ]
+ },
+ {
+  "id": "other",
+  "name": "Ad-hoc",
+  "url": null,
+  "known": false,
+  "adhoc": true,
+  "groups": []
+ }
+]

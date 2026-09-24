@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SKJÓL — Goods order
 
-## Getting Started
+Mobile-first PWA for the SKJÓL restaurant. Kitchen and Bar record what ran out,
+Gústi (manager) sees one combined list grouped by shop and ticks items off while
+buying. UI in EN / IS / CS / PL; item names never translate.
 
-First, run the development server:
+Built from the design handoff `Purchasing v3.dc.html` (high fidelity).
+
+## Stack
+
+- Next.js (App Router) + React + TypeScript, inline styles ported 1:1 from the prototype
+- Supabase (Postgres + Realtime) for live sync between phones
+- PWA: `app/manifest.ts`, generated icons (`/icons/[size]`), `public/sw.js`
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without Supabase env vars the app runs in **offline demo** mode: data lives in
+`localStorage` on one device (tabs of the same browser still sync). The gate
+footer shows "offline demo" in that mode.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Connect Supabase (shared state between phones)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Supabase project (free tier is enough).
+2. SQL editor → run `supabase/migrations/0001_init.sql`
+   (tables, RLS policies, realtime publication).
+3. Copy `.env.example` to `.env.local` and fill in:
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `MANAGER_PIN` — Gústi's 4-digit code (server-side only; default `1234`)
+4. Set the same variables in Vercel → Project → Environment Variables.
 
-## Learn More
+## Data model
 
-To learn more about Next.js, take a look at the following resources:
+| table          | what                                                                      |
+| -------------- | ------------------------------------------------------------------------- |
+| `lines`        | drafts per station (`d:<station>:<item>`) and the open order (`s:<item>`) |
+| `history`      | finished orders with a snapshot of their lines                            |
+| `custom_items` | items staff added themselves                                              |
+| `item_prefs`   | shared rename / hide / move-to-shop per catalog item                      |
+| `favs`         | favourites per station                                                    |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The catalog (shops → categories → items) ships with the app in
+`src/lib/raw.json`. Item ids are positional (`garri-0-3`), so **only append**
+to that file — reordering would re-point saved lines and history.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Writes are optimistic: the UI updates instantly, writes are retried while
+offline, and every phone refetches on realtime events, focus and every 30 s.
 
-## Deploy on Vercel
+## Security notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+There are no user accounts (by design: staff type their name per order). The
+anon key can read and write the five tables, so anyone with the URL can use the
+app. The manager PIN only gates the Buy screen in the UI and is checked
+server-side (`/api/pin`). Keep the URL internal.
