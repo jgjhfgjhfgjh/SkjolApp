@@ -12,7 +12,7 @@ create table if not exists public.lines (
   station   text not null check (station in ('kitchen', 'bar')),
   item_id   text not null,
   status    text not null check (status in ('draft', 'sent')),
-  qty       numeric not null check (qty > 0),
+  qty       double precision not null check (qty > 0),
   unit      text not null default 'pcs' check (unit in ('pcs', 'pack', 'case', 'kg', 'L', 'keg')),
   note      text not null default '',
   "by"      text not null default '',

@@ -49,6 +49,8 @@ export function supabaseDriver(url: string, anonKey: string): Driver {
     async fetch(t) {
       const { data, error } = await sb.from(t).select("*").limit(5000);
       if (error) throw error;
+      // Guard against numeric columns arriving as strings.
+      if (t === "lines") data?.forEach((r) => (r.qty = Number(r.qty)));
       return (data || []) as never;
     },
     async upsert(t, rows) {
