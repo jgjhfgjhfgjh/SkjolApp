@@ -5,7 +5,8 @@ import {
   DEFAULT_UNIT,
   ITEMS,
   ITEM_BY_ID,
-  QUICK,
+  quickFor,
+  unitFor,
   ROLESRC as BASE_ROLESRC,
   SHOPS as BASE_SHOPS,
   UNITKEYS,
@@ -434,7 +435,7 @@ export default function App() {
   function setLine(id: string, patch: Partial<LineRow>) {
     if (!station || needName()) return;
     const cur: LineRow = draft[id] || {
-      id: `d:${station}:${id}`, station, item_id: id, status: "draft", qty: 0, unit: DEFAULT_UNIT, note: "", by: "",
+      id: `d:${station}:${id}`, station, item_id: id, status: "draft", qty: 0, unit: unitFor(id), note: "", by: "",
       at: null, done: false, supplier: "", sent_at: null, sent_by: "",
     };
     const next = { ...cur, ...patch };
@@ -946,7 +947,7 @@ export default function App() {
     : [{ id: "buy", label: t.tabBuy, count: pendingCount }, { id: "history", label: t.tabHist, count: 0 }, { id: "settings", label: settingsTitle(S.lang), count: 0 }];
 
   const renderRow = (it: Item, i: number, items: Item[]) => {
-    const l = draft[it.id], qty = l ? l.qty : 0, unit = l ? l.unit : DEFAULT_UNIT;
+    const l = draft[it.id], qty = l ? l.qty : 0, unit = l ? l.unit : unitFor(it.id);
     const last = lastQty[it.id];
     const open = S.expanded === it.id;
     const swiped = S.swiped === it.id;
@@ -1101,7 +1102,7 @@ export default function App() {
                 </button>
               </div>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>
-                {QUICK.map((n) => chipBtn("q" + n, String(n), qty === n, () => setLine(it.id, { qty: n }), { ...tab, minWidth: 52, fontSize: 15, fontWeight: 600 }))}
+                {quickFor(it.id).map((n) => chipBtn("q" + n, String(n), qty === n, () => setLine(it.id, { qty: n }), { ...tab, minWidth: 52, fontSize: 15, fontWeight: 600 }))}
                 {last && (
                   <button
                     onClick={() => setLine(it.id, { qty: last.qty, unit: last.unit as Unit })}

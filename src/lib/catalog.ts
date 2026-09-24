@@ -39,6 +39,13 @@ export type Unit = (typeof UNITKEYS)[number];
 export const DEFAULT_UNIT: Unit = "pack";
 export const QUICK = [1, 2, 5, 10];
 
+// Per-item overrides of the default unit and the quick amounts (by item id).
+const ITEM_DEFAULTS: Record<string, { unit?: Unit; quick?: number[] }> = {
+  "ms-0-0": { unit: "kg", quick: [30, 40, 50, 80] }, // Mozzarella (pizza)
+};
+export const unitFor = (id: string): Unit => ITEM_DEFAULTS[id]?.unit || DEFAULT_UNIT;
+export const quickFor = (id: string): number[] => ITEM_DEFAULTS[id]?.quick || QUICK;
+
 export const ROLESRC: Record<Station, string[]> = {
   bar: ["bar", "supplies", "other"],
   kitchen: ["garri", "ms", "mata", "farm", "bonus", "supplies", "other"],
