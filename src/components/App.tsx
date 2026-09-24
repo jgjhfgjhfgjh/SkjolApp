@@ -16,6 +16,7 @@ import {
 } from "@/lib/catalog";
 import { LANGS, T, type Lang } from "@/lib/i18n";
 import { getStore, useStore } from "@/lib/store/store";
+import Splash from "./Splash";
 import type { HistLine, LineRow, PrefRow } from "@/lib/store/types";
 
 // ---------- device-local UI state (never shared) ----------
@@ -183,6 +184,20 @@ export default function App() {
       const r = typeof p === "function" ? p(s) : p;
       return r ? { ...s, ...r } : s;
     });
+
+  // Launch screen: stays until shared data is loaded (at least ~1.2 s after start, at most 5 s), then fades.
+  const [splash, setSplash] = useState<"on" | "leaving" | "off">("on");
+  useEffect(() => {
+    const since = performance.now();
+    const wait = db.ready ? Math.max(0, 1200 - since) : Math.max(0, 5000 - since);
+    const t1 = setTimeout(() => setSplash((v) => (v === "on" ? "leaving" : v)), wait);
+    const t2 = setTimeout(() => setSplash("off"), wait + 380);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [db.ready]);
+  const splashEl = splash !== "off" && <Splash leaving={splash === "leaving"} />;
 
   const pinRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -707,6 +722,7 @@ export default function App() {
 
     return (
       <div style={{ minHeight: "100vh", background: "#F4F4F2" }}>
+        {splashEl}
         {S.pinOpen && (
           <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "#FFFFFF", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px", animation: "rise .18s ease" }}>
             <button
@@ -1027,6 +1043,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F4F4F2" }}>
+      {splashEl}
       <div style={{ paddingBottom: padBottom }}>
         {/* HEADER */}
         <header

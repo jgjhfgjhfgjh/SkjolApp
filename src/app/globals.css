@@ -10,6 +10,13 @@ a:hover{color:#8A3F00;text-decoration:underline}
 [data-scroll]{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 [data-scroll]::-webkit-scrollbar{display:none}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Splash: rising steam + indeterminate progress bar */
+@keyframes steam{0%{opacity:0;transform:translateY(2px)}35%{opacity:1}100%{opacity:0;transform:translateY(-3px)}}
+@keyframes loadbar{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+[data-steam]{transform-box:fill-box;animation:steam 1.6s ease-in-out infinite}
+[data-steam="2"]{animation-delay:.25s}
+[data-steam="3"]{animation-delay:.5s}
+[data-loadbar]{animation:loadbar 1.15s cubic-bezier(.45,0,.35,1) infinite}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 [data-printonly]{display:none}
 [data-qr] svg{display:block;width:100%;height:100%}

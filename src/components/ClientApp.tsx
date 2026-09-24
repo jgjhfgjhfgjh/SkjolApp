@@ -2,12 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
+import Splash from "./Splash";
 
 // The whole app lives in the browser (device prefs in localStorage, live data
 // from Supabase), so it is rendered client-only to avoid hydration mismatches.
 const App = dynamic(() => import("./App"), {
   ssr: false,
-  loading: () => <div style={{ minHeight: "100dvh", background: "#F4F4F2" }} />,
+  loading: () => <Splash />,
 });
 
 export default function ClientApp() {
