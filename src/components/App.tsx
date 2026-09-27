@@ -33,7 +33,6 @@ type UI = {
   view: "list" | "grid";
   filter: "todo" | "all" | "done";
   groupSupplier: boolean;
-  showHidden: boolean;
   buySrc: string | null;
   author: string;
   nameErr: boolean;
@@ -76,7 +75,7 @@ const PERSIST: (keyof UI)[] = ["tab", "lang", "scope", "view", "filter", "groupS
 function loadUI(): UI {
   const def: UI = {
     role: null, tab: "order", lang: "en", scope: "all", cat: null, view: "list", filter: "todo",
-    groupSupplier: false, showHidden: false, buySrc: null, author: "", nameErr: false, namePrompt: false,
+    groupSupplier: false, buySrc: null, author: "", nameErr: false, namePrompt: false,
     query: "", newItem: "", newSrc: null, newCat: null, expanded: null, swiped: null, swipeDir: null,
     peek: null, editing: null, editText: "", editSrc: null, editCat: null, editCatNew: false, editCatName: "", shopPick: null, openHist: null, toast: null,
     pinOpen: false, pin: "", pinErr: false, addOpen: false, searchOpen: false, qtyEdit: null,
@@ -517,7 +516,7 @@ export default function App() {
       flash(t.actDelete);
     } else {
       setPref(it.id, { hidden: true });
-      flash(t.actHide);
+      flash(t.actDelete);
     }
     set({ swiped: null });
   }
@@ -733,8 +732,8 @@ export default function App() {
 
   let universe = ITEMS.concat(custom);
   if (allowed) universe = universe.filter((i) => allowed.includes(srcOf(i)));
-  const hiddenHere = universe.filter((i) => isHidden(i.id));
-  if (!S.showHidden) universe = universe.filter((i) => !isHidden(i.id));
+  // Deleted catalog items (hidden pref) are gone for the stations; Gústi can restore them in Settings.
+  universe = universe.filter((i) => !isHidden(i.id));
   let pool = universe;
   if (S.scope !== "all") pool = pool.filter((i) => srcOf(i) === S.scope);
   if (q) pool = pool.filter((i) => (nameOf(i) + " " + catOf(i) + " " + (shopById(srcOf(i))?.name || "")).toLowerCase().includes(q));
@@ -1038,7 +1037,7 @@ export default function App() {
         {rightShow && (
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, display: "flex" }}>
             {actBtn("#6C6C70", () => startEdit(it), <span style={{ width: 15, height: 15, border: "1.8px solid #FFFFFF", borderRadius: "50%" }} />, t.actEdit)}
-            {actBtn("#D70015", () => hideItem(it), <span style={{ width: 15, height: 2, background: "#FFFFFF" }} />, it.isCustom ? t.actDelete : t.actHide)}
+            {actBtn("#D70015", () => hideItem(it), <span style={{ width: 15, height: 2, background: "#FFFFFF" }} />, t.actDelete)}
           </div>
         )}
         <div
@@ -1453,24 +1452,6 @@ export default function App() {
 
             {isOrder && !isFav && orderGroups.length > 0 && (
               <div style={{ padding: "11px 4px 0", fontSize: 12.5, color: "#606060", lineHeight: 1.45 }}>{t.swipeHint}</div>
-            )}
-
-            {isOrder && !isFav && hiddenHere.length > 0 && (
-              <>
-                <div style={{ marginTop: 14, padding: "12px 14px", background: "#F7F7F5", border: "1px solid #E0E0DB", borderRadius: 9, boxShadow: shadowCard, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#5A5566" }}>{hiddenHere.length} {t.hiddenN}</div>
-                  <button onClick={() => set((s) => ({ showHidden: !s.showHidden }))} style={{ border: "1px solid #C7C7C2", background: "#FFFFFF", padding: "0 14px", minHeight: 40, borderRadius: 8, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
-                    {S.showHidden ? t.hideHidden : t.showHidden}
-                  </button>
-                </div>
-                {S.showHidden &&
-                  hiddenHere.map((h) => (
-                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#FFFFFF", border: "1px solid #E0E0DB", borderTop: 0, minHeight: 56, boxShadow: shadowCard }}>
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#5A5566" }}>{nameOf(h)}</div>
-                      <button onClick={() => setPref(h.id, { hidden: false })} style={{ border: "1px solid #141218", background: "#FFFFFF", padding: "0 14px", minHeight: 40, borderRadius: 8, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>{t.restore}</button>
-                    </div>
-                  ))}
-              </>
             )}
 
             {isFav && !orderGroups.length && (

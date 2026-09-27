@@ -16,7 +16,7 @@ const S = {
     shops: "Your own shops", shopsSub: "Shops added from the kitchen or bar. Rename, add an e-shop link, move or remove.",
     shopUrl: "E-shop link (optional)", addShop: "Add shop", shopName: "Shop name", del: "Delete", delConfirm: "Really delete?",
     shopsEmpty: "No shops added yet", shopDeleted: "Shop deleted — its items moved to Ad-hoc", saved: "Saved",
-    hidden: "Hidden items", hiddenEmpty: "No hidden items", app: "App", shareInstall: "Share install link",
+    hidden: "Deleted items", hiddenEmpty: "No deleted items", app: "App", shareInstall: "Share install link",
     openInstall: "Install page", signOut: "Sign out",
   },
   is: {
@@ -27,7 +27,7 @@ const S = {
     shops: "Eigin verslanir", shopsSub: "Verslanir sem bætt var við úr eldhúsi eða bar. Endurnefndu, bættu við vefslóð, færðu eða eyddu.",
     shopUrl: "Vefslóð verslunar (valfrjálst)", addShop: "Bæta við verslun", shopName: "Heiti verslunar", del: "Eyða", delConfirm: "Eyða í alvöru?",
     shopsEmpty: "Engar eigin verslanir enn", shopDeleted: "Verslun eytt — vörurnar fóru í Ad-hoc", saved: "Vistað",
-    hidden: "Faldar vörur", hiddenEmpty: "Engar faldar vörur", app: "Appið", shareInstall: "Deila uppsetningarhlekk",
+    hidden: "Eyddar vörur", hiddenEmpty: "Engar eyddar vörur", app: "Appið", shareInstall: "Deila uppsetningarhlekk",
     openInstall: "Uppsetningarsíða", signOut: "Skrá út",
   },
   cs: {
@@ -38,7 +38,7 @@ const S = {
     shops: "Vlastní obchody", shopsSub: "Obchody přidané z kuchyně nebo baru. Přejmenujte, přidejte odkaz na e-shop, přesuňte nebo smažte.",
     shopUrl: "Odkaz na e-shop (nepovinné)", addShop: "Přidat obchod", shopName: "Název obchodu", del: "Smazat", delConfirm: "Opravdu smazat?",
     shopsEmpty: "Zatím žádné vlastní obchody", shopDeleted: "Obchod smazán — jeho položky jsou v Ad-hoc", saved: "Uloženo",
-    hidden: "Skryté položky", hiddenEmpty: "Žádné skryté položky", app: "Aplikace", shareInstall: "Sdílet odkaz na instalaci",
+    hidden: "Smazané položky", hiddenEmpty: "Žádné smazané položky", app: "Aplikace", shareInstall: "Sdílet odkaz na instalaci",
     openInstall: "Stránka instalace", signOut: "Odhlásit",
   },
   pl: {
@@ -49,7 +49,7 @@ const S = {
     shops: "Własne sklepy", shopsSub: "Sklepy dodane z kuchni lub baru. Zmień nazwę, dodaj link do e-sklepu, przenieś lub usuń.",
     shopUrl: "Link do e-sklepu (opcjonalnie)", addShop: "Dodaj sklep", shopName: "Nazwa sklepu", del: "Usuń", delConfirm: "Na pewno usunąć?",
     shopsEmpty: "Brak własnych sklepów", shopDeleted: "Sklep usunięty — pozycje trafiły do Ad-hoc", saved: "Zapisano",
-    hidden: "Ukryte pozycje", hiddenEmpty: "Brak ukrytych pozycji", app: "Aplikacja", shareInstall: "Udostępnij link instalacji",
+    hidden: "Usunięte pozycje", hiddenEmpty: "Brak usuniętych pozycji", app: "Aplikacja", shareInstall: "Udostępnij link instalacji",
     openInstall: "Strona instalacji", signOut: "Wyloguj",
   },
 } satisfies Record<Lang, unknown>;
