@@ -137,6 +137,13 @@ const SEND_ASK: Record<Lang, { title: string; sub: string; back: string; go: str
   cs: { title: "Odeslat objednávku Gústimu?", sub: "Gústi dostane seznam hned. Nejdřív zkontrolujte, že je kompletní.", back: "Zpět k objednávce", go: "Opravdu odeslat Gústimu" },
   pl: { title: "Wysłać zamówienie do Gústiego?", sub: "Gústi od razu dostanie listę. Najpierw sprawdź, czy jest kompletna.", back: "Wróć do zamówienia", go: "Tak, wyślij do Gústiego" },
 };
+// The open (sent, not yet bought) order: badge on catalog rows and its card on top of History.
+const PENDING: Record<Lang, { sent: string; bought: string; waiting: string; sentAt: string }> = {
+  en: { sent: "Sent", bought: "Bought", waiting: "Sent to Gústi · waiting to be bought", sentAt: "sent" },
+  is: { sent: "Sent", bought: "Keypt", waiting: "Sent til Gústa · bíður innkaupa", sentAt: "sent" },
+  cs: { sent: "Odesláno", bought: "Nakoupeno", waiting: "Odesláno Gústimu · čeká na nákup", sentAt: "odesláno" },
+  pl: { sent: "Wysłane", bought: "Kupione", waiting: "Wysłane do Gústiego · czeka na zakup", sentAt: "wysłane" },
+};
 const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
 const SHARE_TEXT: Record<Lang, string> = {
   en: "Install the SKJÓL goods-order app on your phone or tablet:",
@@ -537,16 +544,20 @@ export default function App() {
     if (l) store.upsert("lines", [{ ...l, done: !l.done }]);
   }
 
-  function complete() {
-    if (!order) return;
-    const lines: HistLine[] = Object.keys(order.lines).map((id) => {
-      const it = item(id), l = order.lines[id];
+  // The open order as history lines — archived by complete(), shown as "waiting" on top of History until then.
+  const orderHist = (o: NonNullable<typeof order>): HistLine[] =>
+    Object.keys(o.lines).map((id) => {
+      const it = item(id), l = o.lines[id];
       return {
         id, name: it ? nameOf(it) : id, cat: it ? it.cat : "—", src: it ? srcOf(it) : "other",
         srcName: it ? shopById(srcOf(it))?.name || "—" : "—", qty: l.qty, unit: l.unit, note: l.note || "",
-        by: l.by || order.by, done: !!l.done, station: l.station,
+        by: l.by || o.by, done: !!l.done, station: l.station,
       };
     });
+
+  function complete() {
+    if (!order) return;
+    const lines = orderHist(order);
     const now = Date.now();
     store.upsert("history", [{ id: "h" + now, at: order.at, closed_at: now, by: order.by, lines }]);
     store.remove("lines", sentLines.map((l) => l.id));
@@ -966,6 +977,7 @@ export default function App() {
   const renderRow = (it: Item, i: number, items: Item[]) => {
     const l = draft[it.id], qty = l ? l.qty : 0, unit = l ? l.unit : unitFor(it.id);
     const last = lastQty[it.id];
+    const sent = order?.lines[it.id];
     const open = S.expanded === it.id;
     const swiped = S.swiped === it.id;
     const subs: string[] = [];
@@ -1048,6 +1060,11 @@ export default function App() {
                   {!S.cat && (
                     <span style={{ ...tab, fontSize: 10.5, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: qty > 0 ? "#8A3F00" : "#5A5566", background: qty > 0 ? "#FFDCBC" : "#F2F2F0", padding: "3px 7px", borderRadius: 4 }}>
                       {shopById(srcOf(it))?.name || "—"}
+                    </span>
+                  )}
+                  {sent && (
+                    <span style={{ ...tab, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", color: "#0B6B2E", background: "#DDF3E4", padding: "3px 7px", borderRadius: 4 }}>
+                      ✓ {sent.done ? PENDING[S.lang].bought : PENDING[S.lang].sent} · {sent.qty} {unitLabel(sent.unit)}
                     </span>
                   )}
                   {isFav && counts[it.id] > 0 && (
@@ -1681,7 +1698,38 @@ export default function App() {
                   </button>
                 ))}
             </div>
-            {!history.length && (
+            {order && (() => {
+              const lines = orderHist(order);
+              const srcs = Array.from(new Set(lines.map((l) => l.srcName)));
+              const open = !S.histSel && S.openHist === "pending";
+              return (
+                <div style={{ background: "#FFFFFF", border: "1px solid #9FD8B2", borderLeft: "4px solid #1F9D55", borderRadius: 9, marginBottom: 10, overflow: "hidden", boxShadow: shadowCard, opacity: S.histSel ? 0.5 : 1 }}>
+                  <div
+                    onClick={() => !S.histSel && set((s) => ({ openHist: s.openHist === "pending" ? null : "pending" }))}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: S.histSel ? "default" : "pointer", minHeight: 64 }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#0B6B2E", marginBottom: 5 }}>{PENDING[S.lang].waiting}</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.014em" }}>{plural(lines.length, t.item, t.items)} · {plural(srcs.length, t.shop, t.shops)}</div>
+                      <div style={{ fontSize: 12.5, color: "#5A5566", marginTop: 4, lineHeight: 1.4 }}>{PENDING[S.lang].sentAt} {fmt(order.at)} · {t.by} {order.by} · {srcs.join(", ")}</div>
+                    </div>
+                    {!S.histSel && <div style={{ color: "#606060", fontSize: 15, padding: 4, flex: "none" }}>{open ? "▴" : "▾"}</div>}
+                  </div>
+                  {open && (
+                    <div style={{ borderTop: "1px solid #E4E4E0", background: "#F7F7F5" }}>
+                      {lines.map((l) => (
+                        <div key={l.id} style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "10px 14px", borderBottom: "1px solid #E9E9E5", fontSize: 15 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>{l.done ? "✓ " : ""}{l.name}</div>
+                          <div style={{ ...tab, fontSize: 10.5, letterSpacing: "0.06em", textTransform: "uppercase", color: "#606060" }}>{l.srcName}</div>
+                          <div style={{ ...tab, fontWeight: 600, minWidth: 64, textAlign: "right" }}>{l.qty} {unitLabel(l.unit)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {!history.length && !order && (
               <div style={{ padding: "48px 22px", textAlign: "center", background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 11, boxShadow: shadowCard, color: "#5A5566", fontSize: 15 }}>{t.noHistory}</div>
             )}
             {history.map((h) => {
