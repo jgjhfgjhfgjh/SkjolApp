@@ -48,6 +48,10 @@ type UI = {
   peek: "L" | "R" | null;
   editing: string | null;
   editText: string;
+  editSrc: string | null; // shop picked in the item edit form
+  editCat: string | null; // category picked in the item edit form
+  editCatNew: boolean;
+  editCatName: string;
   shopPick: string | null;
   openHist: string | null;
   toast: string | null;
@@ -74,7 +78,7 @@ function loadUI(): UI {
     role: null, tab: "order", lang: "en", scope: "all", cat: null, view: "list", filter: "todo",
     groupSupplier: false, showHidden: false, buySrc: null, author: "", nameErr: false, namePrompt: false,
     query: "", newItem: "", newSrc: null, newCat: null, expanded: null, swiped: null, swipeDir: null,
-    peek: null, editing: null, editText: "", shopPick: null, openHist: null, toast: null,
+    peek: null, editing: null, editText: "", editSrc: null, editCat: null, editCatNew: false, editCatName: "", shopPick: null, openHist: null, toast: null,
     pinOpen: false, pin: "", pinErr: false, addOpen: false, searchOpen: false, qtyEdit: null,
     newShopOpen: false, newShopName: "", newCatOpen: false, newCatName: "",
     histSel: null, histConfirm: false, sendAsk: false,
@@ -329,6 +333,7 @@ export default function App() {
   const item = (id: string): Item | null => ITEM_BY_ID[id] || custom.find((c) => c.id === id) || null;
   const nameOf = (it: Item | null) => (it && (prefs[it.id]?.rename || it.name)) || "";
   const srcOf = (it: Item | null) => (it && (prefs[it.id]?.src_override || it.src)) || "other";
+  const catOf = (it: Item) => prefs[it.id]?.cat_override || it.cat;
   const isHidden = (id: string) => !!prefs[id]?.hidden;
 
   const role = S.role;
@@ -472,7 +477,7 @@ export default function App() {
 
   function setPref(id: string, patch: Partial<PrefRow>) {
     const next: PrefRow = { ...(prefs[id] || { id, rename: null, hidden: false, src_override: null }), ...patch };
-    if (!next.rename && !next.hidden && !next.src_override) store.remove("item_prefs", [id]);
+    if (!next.rename && !next.hidden && !next.src_override && !next.cat_override) store.remove("item_prefs", [id]);
     else store.upsert("item_prefs", [next]);
   }
   function toggleFav(id: string) {
@@ -484,10 +489,26 @@ export default function App() {
   }
   function commitEdit() {
     const id = S.editing, v = String(S.editText || "").trim();
-    if (!id) return;
-    const orig = item(id)?.name;
-    setPref(id, { rename: !v || v === orig ? null : v });
-    set({ editing: null, editText: "" });
+    const it = id ? item(id) : null;
+    if (!id || !it) return;
+    const src = S.editSrc || srcOf(it), cat = S.editCat || catOf(it);
+    const rename = !v || v === it.name ? null : v;
+    const base = ITEM_BY_ID[id];
+    if (base) {
+      // One write for name, shop and category, so none of them overwrites the others.
+      setPref(id, { rename, src_override: src === base.src ? null : src, cat_override: cat === base.cat ? null : cat });
+    } else {
+      setPref(id, { rename });
+      const c = db.custom_items.find((x) => x.id === id);
+      if (c && (c.src !== src || c.cat !== cat)) store.upsert("custom_items", [{ ...c, src, cat }]);
+    }
+    closeEdit();
+  }
+  function startEdit(it: Item) {
+    set({ editing: it.id, editText: nameOf(it), editSrc: srcOf(it), editCat: catOf(it), editCatNew: false, editCatName: "", swiped: null, expanded: null });
+  }
+  function closeEdit() {
+    set({ editing: null, editText: "", editSrc: null, editCat: null, editCatNew: false, editCatName: "" });
   }
   function hideItem(it: Item) {
     if (draft[it.id]) store.remove("lines", [draft[it.id].id]);
@@ -549,7 +570,7 @@ export default function App() {
     Object.keys(o.lines).map((id) => {
       const it = item(id), l = o.lines[id];
       return {
-        id, name: it ? nameOf(it) : id, cat: it ? it.cat : "—", src: it ? srcOf(it) : "other",
+        id, name: it ? nameOf(it) : id, cat: it ? catOf(it) : "—", src: it ? srcOf(it) : "other",
         srcName: it ? shopById(srcOf(it))?.name || "—" : "—", qty: l.qty, unit: l.unit, note: l.note || "",
         by: l.by || o.by, done: !!l.done, station: l.station,
       };
@@ -716,7 +737,7 @@ export default function App() {
   if (!S.showHidden) universe = universe.filter((i) => !isHidden(i.id));
   let pool = universe;
   if (S.scope !== "all") pool = pool.filter((i) => srcOf(i) === S.scope);
-  if (q) pool = pool.filter((i) => (nameOf(i) + " " + i.cat + " " + (shopById(srcOf(i))?.name || "")).toLowerCase().includes(q));
+  if (q) pool = pool.filter((i) => (nameOf(i) + " " + catOf(i) + " " + (shopById(srcOf(i))?.name || "")).toLowerCase().includes(q));
 
   const scopes = [{ id: "all", label: t.scopeAll }]
     .concat(
@@ -735,8 +756,8 @@ export default function App() {
   if (showGridMode) {
     const cmap = new Map<string, Item[]>();
     pool.forEach((i) => {
-      if (!cmap.has(i.cat)) cmap.set(i.cat, []);
-      cmap.get(i.cat)!.push(i);
+      if (!cmap.has(catOf(i))) cmap.set(catOf(i), []);
+      cmap.get(catOf(i))!.push(i);
     });
     cmap.forEach((items, name) => {
       const picked = items.filter((i) => draft[i.id]).length;
@@ -750,7 +771,7 @@ export default function App() {
 
   const orderGroups: { name: string; meta: string; items: Item[] }[] = [];
   if (isOrder && (isFav || q || S.cat || S.view === "list")) {
-    if (S.cat) pool = pool.filter((i) => i.cat === S.cat);
+    if (S.cat) pool = pool.filter((i) => catOf(i) === S.cat);
     const map = new Map<string, Item[]>();
     if (isFav) {
       const starred = pool.filter((i) => favs[i.id]);
@@ -766,7 +787,7 @@ export default function App() {
         rest = pool.filter((i) => !isPinned(i));
       }
       rest.forEach((i) => {
-        const k = S.cat ? shopById(srcOf(i))?.name || "—" : i.cat;
+        const k = S.cat ? shopById(srcOf(i))?.name || "—" : catOf(i);
         if (!map.has(k)) map.set(k, []);
         map.get(k)!.push(i);
       });
@@ -1017,7 +1038,7 @@ export default function App() {
         )}
         {rightShow && (
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, display: "flex" }}>
-            {actBtn("#6C6C70", () => set({ editing: it.id, editText: nameOf(it), swiped: null }), <span style={{ width: 15, height: 15, border: "1.8px solid #FFFFFF", borderRadius: "50%" }} />, t.actEdit)}
+            {actBtn("#6C6C70", () => startEdit(it), <span style={{ width: 15, height: 15, border: "1.8px solid #FFFFFF", borderRadius: "50%" }} />, t.actEdit)}
             {actBtn("#D70015", () => hideItem(it), <span style={{ width: 15, height: 2, background: "#FFFFFF" }} />, it.isCustom ? t.actDelete : t.actHide)}
           </div>
         )}
@@ -1034,17 +1055,55 @@ export default function App() {
           }}
         >
           {S.editing === it.id ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px 9px 12px", minHeight: 62, background: "#F7F7F5" }}>
+            <div style={{ padding: "10px 12px 12px", background: "#F7F7F5" }}>
               <input
                 autoFocus
                 value={S.editText}
                 onChange={(e) => set({ editText: e.target.value })}
                 onKeyDown={(e) => e.key === "Enter" && commitEdit()}
                 placeholder={t.renamePh}
-                style={{ flex: 1, minWidth: 0, border: "1px solid #141218", background: "#FFFFFF", borderRadius: 8, padding: "0 12px", minHeight: 46, fontSize: 16 }}
+                style={{ width: "100%", boxSizing: "border-box", border: "1px solid #141218", background: "#FFFFFF", borderRadius: 8, padding: "0 12px", minHeight: 46, fontSize: 16 }}
               />
-              <button onClick={() => set({ editing: null, editText: "" })} style={{ border: "1px solid #C7C7C2", background: "#FFFFFF", padding: "0 13px", minHeight: 46, borderRadius: 8, fontSize: 13.5, fontWeight: 500 }}>{t.cancel}</button>
-              <button onClick={commitEdit} style={{ border: 0, background: "#141218", color: "#FFFFFF", padding: "0 16px", minHeight: 46, borderRadius: 8, fontSize: 13.5, fontWeight: 600 }}>{t.save}</button>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6C6C70", padding: "12px 2px 7px" }}>{t.pickShop}</div>
+              <div data-scroll="1" style={{ display: "flex", gap: 7, margin: "0 -12px", padding: "0 12px 2px" }}>
+                {allowedShops.map((x) => {
+                  const on = S.editSrc === x.id;
+                  return (
+                    <button key={x.id} onClick={() => set({ editSrc: x.id })} style={{ flex: "none", border: "1px solid " + (on ? "#2E2C33" : "#DCDCE0"), background: on ? "#2E2C33" : "#FFFFFF", color: on ? "#FFFFFF" : "#2E2C33", padding: "0 14px", minHeight: 40, borderRadius: 20, fontSize: 14, fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {x.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6C6C70", padding: "12px 2px 7px" }}>{t.pickCat}</div>
+              <div data-scroll="1" style={{ display: "flex", gap: 7, margin: "0 -12px", padding: "0 12px 2px" }}>
+                {addCats.map((nm) => {
+                  const on = S.editCat === nm;
+                  return (
+                    <button key={nm} onClick={() => set({ editCat: nm })} style={{ flex: "none", border: "1px solid " + (on ? "#FF7A18" : "#DCDCE0"), background: on ? "#FF7A18" : "#FFFFFF", color: on ? "#1C0D02" : "#2E2C33", padding: "0 14px", minHeight: 40, borderRadius: 20, fontSize: 14, fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {catLabel(nm)}
+                    </button>
+                  );
+                })}
+                {pillNew(ADD_NEW[S.lang].cat, () => set({ editCatNew: true }))}
+              </div>
+              {S.editCatNew &&
+                newField(
+                  S.editCatName,
+                  ADD_NEW[S.lang].catPh,
+                  (v) => set({ editCatName: v }),
+                  () => {
+                    const nm = S.editCatName.trim();
+                    if (!nm) return;
+                    const existing = addCats.find((c) => catLabel(c).toLowerCase() === nm.toLowerCase());
+                    set({ editCat: existing || nm, editCatNew: false, editCatName: "" });
+                  },
+                  () => set({ editCatNew: false, editCatName: "" }),
+                )}
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={closeEdit} style={{ border: "1px solid #C7C7C2", background: "#FFFFFF", padding: "0 16px", minHeight: 46, borderRadius: 8, fontSize: 14, fontWeight: 500 }}>{t.cancel}</button>
+                <button onClick={commitEdit} style={{ flex: 1, border: 0, background: "#141218", color: "#FFFFFF", padding: "0 16px", minHeight: 46, borderRadius: 8, fontSize: 14, fontWeight: 600 }}>{t.save}</button>
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 9px 8px 12px", minHeight: 62 }}>
@@ -1171,8 +1230,9 @@ export default function App() {
       if (!names.includes(g)) names.push(g);
     };
     SHOPS.filter((x) => !allowed || allowed.includes(x.id)).forEach((x) => x.groups.forEach(add));
-    custom.filter((c) => !allowed || allowed.includes(srcOf(c))).forEach((c) => add(c.cat));
+    universe.forEach((i) => add(catOf(i)));
     if (S.newCat) add(S.newCat);
+    if (S.editCat) add(S.editCat);
     return names.filter((n) => n !== "Other").concat(["Other"]);
   })();
   const scrollEnd = (id: string) =>
@@ -1552,7 +1612,7 @@ export default function App() {
                   const map = new Map<string, string[]>();
                   rows.forEach((id) => {
                     const it = item(id)!;
-                    const k = S.groupSupplier && !asrc.known ? order.lines[id].supplier || t.unassigned : catLabel(it.cat);
+                    const k = S.groupSupplier && !asrc.known ? order.lines[id].supplier || t.unassigned : catLabel(catOf(it));
                     if (!map.has(k)) map.set(k, []);
                     map.get(k)!.push(id);
                   });

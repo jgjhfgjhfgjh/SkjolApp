@@ -55,6 +55,7 @@ export type PrefRow = {
   rename: string | null;
   hidden: boolean;
   src_override: string | null;
+  cat_override?: string | null;
 };
 
 export type FavRow = { id: string; station: Station; item_id: string };
