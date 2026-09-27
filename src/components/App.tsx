@@ -572,8 +572,10 @@ export default function App() {
   function addCustomItem() {
     const nm = String(S.newItem || "").trim();
     if (!nm || !station || needName()) return;
-    const src = S.newSrc || (S.scope !== "all" ? S.scope : "other");
     const cat = S.newCat || "Other";
+    // No shop picked: a category that only one of this station's shops has (e.g. "Soft drinks" → Bar) decides it.
+    const byCat = SHOPS.filter((x) => !x.adhoc && (!allowed || allowed.includes(x.id)) && x.groups.includes(cat));
+    const src = S.newSrc || (S.scope !== "all" ? S.scope : byCat.length === 1 ? byCat[0].id : "other");
     const now = Date.now();
     const id = "c" + now.toString(36) + Math.random().toString(36).slice(2, 6);
     store.upsert("custom_items", [{ id, name: nm, cat, src, created_by: S.author, created_at: now }]);
