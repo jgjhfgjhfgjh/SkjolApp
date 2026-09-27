@@ -1820,8 +1820,16 @@ export default function App() {
         {/* NAME PROMPT */}
         {npOpen && (
           <div data-noprint="1" style={{ position: "fixed", inset: 0, zIndex: 80, background: "transparent", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "max(10vh,env(safe-area-inset-top)) 16px 16px" }}>
-            <div role="dialog" aria-modal="true" aria-labelledby="np-title" style={{ width: "100%", maxWidth: 440, background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 22, padding: "24px 20px 18px", boxShadow: "0 2px 6px rgba(23,26,31,0.10),0 24px 60px -16px rgba(23,26,31,0.45)", animation: "rise .18s ease" }}>
-              <div id="np-title" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em", color: "#2E2C33", lineHeight: 1.15 }}>{t.npTitle}</div>
+            <div role="dialog" aria-modal="true" aria-labelledby="np-title" style={{ position: "relative", width: "100%", maxWidth: 440, background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 22, padding: "24px 20px 18px", boxShadow: "0 2px 6px rgba(23,26,31,0.10),0 24px 60px -16px rgba(23,26,31,0.45)", animation: "rise .18s ease" }}>
+              {/* Closing without a name is fine: every edit of the list still asks for it (needName). */}
+              <button
+                onClick={() => set({ namePrompt: false })}
+                aria-label={t.cancel}
+                style={{ position: "absolute", top: 10, right: 10, width: 44, height: 44, border: 0, borderRadius: "50%", background: "transparent", color: "#8E8E93", fontSize: 28, lineHeight: 1, padding: 0 }}
+              >
+                ×
+              </button>
+              <div id="np-title" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em", color: "#2E2C33", lineHeight: 1.15, paddingRight: 36 }}>{t.npTitle}</div>
               <div style={{ fontSize: 15, color: "#6C6C70", marginTop: 8, lineHeight: 1.45, textWrap: "pretty" }}>{t.npSub}</div>
               <div style={{ marginTop: 18, display: "flex", alignItems: "center", background: "#F2F2F7", borderRadius: 12, padding: "0 14px", height: 54, border: "2px solid #FF7A18" }}>
                 <input
