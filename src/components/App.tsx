@@ -1004,7 +1004,6 @@ export default function App() {
     const subs: string[] = [];
     if (it.hint) subs.push(it.hint);
     if (l && l.note) subs.push(l.note);
-    if (it.isCustom) subs.push(t.suggested);
     if (!l && last) subs.push(t.lastTime + " " + last.qty + " " + unitLabel(last.unit));
     if (l) subs.push(unitLabel(unit) + (l.by ? " · " + l.by : ""));
     const peeking = sw.current && sw.current.id === it.id;
