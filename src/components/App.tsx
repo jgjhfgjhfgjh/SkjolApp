@@ -63,6 +63,7 @@ type UI = {
   newCatName: string;
   histSel: string[] | null; // null = not selecting
   histConfirm: boolean;
+  sendAsk: boolean;
 };
 
 const UI_KEY = "skjol.ui.v1";
@@ -76,7 +77,7 @@ function loadUI(): UI {
     peek: null, editing: null, editText: "", shopPick: null, openHist: null, toast: null,
     pinOpen: false, pin: "", pinErr: false, addOpen: false, searchOpen: false, qtyEdit: null,
     newShopOpen: false, newShopName: "", newCatOpen: false, newCatName: "",
-    histSel: null, histConfirm: false,
+    histSel: null, histConfirm: false, sendAsk: false,
   };
   try {
     const p = JSON.parse(localStorage.getItem(UI_KEY) || "null");
@@ -129,6 +130,12 @@ const HIST_DEL: Record<Lang, { select: string; all: string; del: string; confirm
   is: { select: "Velja", all: "Velja allt", del: "Eyða", confirm: "Eyða í alvöru? Hverfur hjá öllum.", done: "Eytt úr sögu" },
   cs: { select: "Vybrat", all: "Vybrat vše", del: "Smazat", confirm: "Opravdu smazat? Zmizí všem.", done: "Smazáno z historie" },
   pl: { select: "Zaznacz", all: "Zaznacz wszystko", del: "Usuń", confirm: "Na pewno usunąć? Zniknie u wszystkich.", done: "Usunięto z historii" },
+};
+const SEND_ASK: Record<Lang, { title: string; sub: string; back: string; go: string }> = {
+  en: { title: "Send the order to Gústi?", sub: "Gústi gets the list right away. Check it's complete first.", back: "Back to order", go: "Yes, send to Gústi" },
+  is: { title: "Senda pöntunina til Gústa?", sub: "Gústi fær listann strax. Athugaðu fyrst að hann sé fullkominn.", back: "Aftur í pöntun", go: "Já, senda til Gústa" },
+  cs: { title: "Odeslat objednávku Gústimu?", sub: "Gústi dostane seznam hned. Nejdřív zkontrolujte, že je kompletní.", back: "Zpět k objednávce", go: "Opravdu odeslat Gústimu" },
+  pl: { title: "Wysłać zamówienie do Gústiego?", sub: "Gústi od razu dostanie listę. Najpierw sprawdź, czy jest kompletna.", back: "Wróć do zamówienia", go: "Tak, wyślij do Gústiego" },
 };
 const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
 const SHARE_TEXT: Record<Lang, string> = {
@@ -496,7 +503,15 @@ export default function App() {
     set({ shopPick: null });
   }
 
+  // The Send button only asks; the confirmation popup calls send().
+  function askSend() {
+    if (!Object.keys(draft).length || !station) return;
+    if (needName()) return;
+    set({ sendAsk: true });
+  }
+
   function send() {
+    set({ sendAsk: false });
     const ids = Object.keys(draft);
     if (!ids.length || !station) return;
     if (needName()) return;
@@ -1757,7 +1772,7 @@ export default function App() {
                 <div style={{ fontSize: 12.5, color: "#AFA9BE", marginTop: 3 }}>{!draftIds.length ? t.emptyHint : hasName ? t.sendFrom + " " + S.author : t.sendHint}</div>
               </div>
               <button
-                onClick={send}
+                onClick={askSend}
                 style={{ border: 0, background: hasName && draftIds.length ? "#FF7A18" : "#2A2830", color: hasName && draftIds.length ? "#1C0D02" : "#8A84A0", fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", padding: "0 28px", minHeight: 52, borderRadius: 9, flex: "none" }}
               >
                 {t.send}
@@ -1775,6 +1790,27 @@ export default function App() {
             <div style={{ width: "100%", padding: "11px 16px", display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ ...tab, flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600 }}>{doneCount} / {allIds.length} {t.ordered}</div>
               <button onClick={complete} style={{ border: 0, background: "#FF7A18", color: "#1C0D02", fontSize: 15, fontWeight: 700, padding: "0 20px", minHeight: 48, borderRadius: 9, flex: "none", whiteSpace: "nowrap" }}>{t.allOrdered}</button>
+            </div>
+          </div>
+        )}
+
+        {/* SEND CONFIRM */}
+        {isOrder && S.sendAsk && (
+          <div
+            data-noprint="1"
+            onClick={(e) => e.target === e.currentTarget && set({ sendAsk: false })}
+            style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(20,18,24,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
+          >
+            <div role="dialog" aria-modal="true" aria-labelledby="sa-title" style={{ width: "100%", maxWidth: 440, background: "#FFFFFF", border: "1px solid #E0E0DB", borderRadius: 22, padding: "24px 20px 18px", boxShadow: "0 2px 6px rgba(23,26,31,0.10),0 24px 60px -16px rgba(23,26,31,0.45)", animation: "rise .18s ease" }}>
+              <div id="sa-title" style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em", color: "#2E2C33", lineHeight: 1.15 }}>{SEND_ASK[S.lang].title}</div>
+              <div style={{ ...tab, fontSize: 15, fontWeight: 600, color: "#2E2C33", marginTop: 10, whiteSpace: "pre" }}>
+                {plural(draftIds.length, t.item, t.items) + "  ·  " + plural(draftSrcs.size, t.shop, t.shops)}
+              </div>
+              <div style={{ fontSize: 15, color: "#6C6C70", marginTop: 6, lineHeight: 1.45, textWrap: "pretty" }}>{SEND_ASK[S.lang].sub}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+                <button autoFocus onClick={send} style={{ border: 0, background: "#FF7A18", color: "#1C0D02", fontSize: 16, fontWeight: 700, minHeight: 54, borderRadius: 12 }}>{SEND_ASK[S.lang].go}</button>
+                <button onClick={() => set({ sendAsk: false })} style={{ border: 0, background: "#F2F2F7", color: "#2E2C33", fontSize: 16, fontWeight: 600, minHeight: 52, borderRadius: 12 }}>{SEND_ASK[S.lang].back}</button>
+              </div>
             </div>
           </div>
         )}
