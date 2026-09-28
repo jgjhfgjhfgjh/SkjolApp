@@ -39,3 +39,5 @@ a:hover{color:#8A3F00;text-decoration:underline}
 /* On phones the top bar scrolls away */
 @media (max-width:759px){[data-hdr]{position:relative!important}}
 @media print{[data-noprint]{display:none!important}[data-printonly]{display:block!important}body{background:#fff}}
+/* Header station CTA: just the ⇄ chip on phones so the language switch stays on the same row. */
+@media (max-width:439px){[data-swlabel]{display:none}}

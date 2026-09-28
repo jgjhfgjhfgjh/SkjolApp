@@ -147,6 +147,7 @@ const PENDING: Record<Lang, { sent: string; bought: string; waiting: string; sen
   cs: { sent: "Odesláno", bought: "Nakoupeno", waiting: "Odesláno Gústimu · čeká na nákup", sentAt: "odesláno" },
   pl: { sent: "Wysłane", bought: "Kupione", waiting: "Wysłane do Gústiego · czeka na zakup", sentAt: "wysłane" },
 };
+const SWITCH_LABEL: Record<Lang, string> = { en: "Switch", is: "Skipta", cs: "Změnit", pl: "Zmień" };
 const SHARE_LABEL: Record<Lang, string> = { en: "Share", is: "Deila", cs: "Sdílet", pl: "Udostępnij" };
 const SHARE_TEXT: Record<Lang, string> = {
   en: "Install the SKJÓL goods-order app on your phone or tablet:",
@@ -1304,18 +1305,22 @@ export default function App() {
           }}
         >
           <div style={{ width: "100%", padding: "11px 16px 0" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 11, minHeight: 38 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, minHeight: 38 }}>
+              {/* App logo (the home-screen icon) + CTA back to the station picker. */}
+              <div style={{ position: "relative", flex: "none", width: 38, height: 38 }}>
+                <img src="/icon.svg" alt="SKJÓL" width={38} height={38} style={{ display: "block", borderRadius: 10, boxShadow: "0 3px 10px -4px rgba(180,70,20,0.5)" }} />
+                {!db.online && <span title="offline" style={{ position: "absolute", top: -3, right: -3, width: 11, height: 11, borderRadius: "50%", background: "#D93636", border: "2px solid #FFFFFF" }} />}
+              </div>
               <button
                 onClick={() => set({ role: null, expanded: null, query: "", cat: null, author: "", nameErr: false, swiped: null, addOpen: false, searchOpen: false })}
-                style={{ border: "1px solid #E0E0DB", background: "#FFFFFF", borderRadius: 20, padding: "7px 13px 7px 10px", display: "flex", alignItems: "center", gap: 7, minHeight: 38 }}
+                aria-label={(isBar ? t.bar : isKitchen ? t.kitchen : t.manager) + " · " + SWITCH_LABEL[S.lang]}
+                style={{ border: "1px solid #E0E0DB", background: "#FFFFFF", borderRadius: 20, padding: "6px 6px 6px 11px", display: "flex", alignItems: "center", gap: 7, minHeight: 38, minWidth: 0 }}
               >
-                <span style={{ fontSize: 15, color: "#5A5566", lineHeight: 1 }}>‹</span>
                 <span style={{ width: 9, height: 9, borderRadius: "50%", background: isBar ? "#2E9B57" : isKitchen ? "#F2622A" : "#2F6BB5", flex: "none" }} />
                 <span style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{isBar ? t.bar : isKitchen ? t.kitchen : t.manager}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: "#C24A00", background: "#FFF1E3", padding: "4px 9px", borderRadius: 14, whiteSpace: "nowrap" }}><span data-swlabel="1">{SWITCH_LABEL[S.lang]} </span>⇄</span>
               </button>
-              <div style={{ flex: 1, minWidth: 8, textAlign: "center", overflow: "hidden", fontSize: 11.5, fontWeight: 600, letterSpacing: "0.13em", color: "#5A5566", whiteSpace: "nowrap" }}>
-                SKJÓL{!db.online && <span style={{ color: "#D93636", letterSpacing: 0 }}> ●</span>}
-              </div>
+              <div style={{ flex: 1, minWidth: 0 }} />
               <Langs lang={S.lang} onLang={(lang) => set({ lang })} />
             </div>
             <nav style={{ display: "flex", gap: 4, padding: "6px 0 0" }}>
